@@ -1,0 +1,40 @@
+# Build directories
+build/
+build-*/
+include
+
+
+# Compiled binaries and object files
+*.exe
+*.obj
+*.pdb
+*.ilk
+*.o
+*.so
+*.a
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+
+# IDE-specific files
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+.vs/
+*.code-workspace
+
+# Temporary files
+*.log
+*.tmp
+*.bak
+
+# Runtime binaries (optional exclusion)
+bin/
+
+# macOS-specific
+.DS_Store
