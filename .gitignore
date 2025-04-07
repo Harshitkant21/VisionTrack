@@ -38,3 +38,15 @@ bin/
 
 # macOS-specific
 .DS_Store
+
+# Ignore model files
+models/*.onnx
+models/*.names
+
+# Ignore actual config files (but keep samples)
+config/config.txt
+*.txt
+!config.sample.txt
+
+#default editor settings
+.vscode
