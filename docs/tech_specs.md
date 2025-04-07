@@ -21,7 +21,9 @@ VisionTrack is a C++ application using OpenCV for real-time object tracking and 
 - **`model/`**: Stores the exported YOLOv11 ONNX model and label definitions.
   - `yolov11n.onnx`: YOLOv11 object detection model in ONNX format.
   - `coco.names`: COCO dataset class labels corresponding to the ONNX model output.
-
+- **`config/`**: Contains configuration files for runtime detection settings.
+  - `config.txt`: Specifies model path, thresholds, and default video source.
+  
 ## CMake Configuration
 
 - **File**: `CMakeLists.txt` in the root.
