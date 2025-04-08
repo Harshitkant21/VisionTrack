@@ -1,0 +1,6 @@
+# VisionTrack Configuration
+model_path=Your yolo model path 
+classes_path=Your coco file path
+confidence_threshold=0.25
+nms_threshold=0.45
+default_source=0
