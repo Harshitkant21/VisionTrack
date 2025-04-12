@@ -11,6 +11,11 @@ Config::Config()
     settings["confidence_threshold"] = "0.25";
     settings["nms_threshold"] = "0.45";
     settings["default_source"] = "0";
+    
+    settings["show_trajectories"] = "true";
+    settings["trajectory_length"] = "10";
+    settings["show_velocity_vectors"] = "true";
+    settings["use_gpu"] = "true";
 }
 
 bool Config::loadFromFile(const std::string &filename)
@@ -80,6 +85,23 @@ float Config::getFloat(const std::string &key, float defaultValue) const
 }
 
 int Config::getInt(const std::string &key, int defaultValue) const
+{
+    auto it = settings.find(key);
+    if (it != settings.end())
+    {
+        try
+        {
+            return std::stoi(it->second);
+        }
+        catch (...)
+        {
+            std::cerr << "Warning: Could not convert '" << key << "' value to int" << std::endl;
+        }
+    }
+    return defaultValue;
+}
+
+bool Config::getBool(const std::string &key, bool defaultValue) const
 {
     auto it = settings.find(key);
     if (it != settings.end())

@@ -8,7 +8,7 @@
 #include <fstream>
 #include <vector>
 
-class YoloDetector
+class Detection
 {
 private:
     cv::dnn::Net net;
@@ -17,7 +17,7 @@ private:
     float nmsThreshold;
 
 public:
-    YoloDetector(const std::string &modelPath, const std::string &classesPath,
+    Detection(const std::string &modelPath, const std::string &classesPath,
                  float confThresh = 0.25, float nmsThresh = 0.45);
 
     bool detect(const cv::Mat &frame, std::vector<cv::Rect> &boxes,

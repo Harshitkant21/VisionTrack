@@ -124,3 +124,4 @@ This guide provides step-by-step instructions to set up, build, and run VisionTr
 ## Notes
 - This setup uses MinGW Makefiles for Windows. If using Linux/macOS, adjust the generator (e.g., `Unix Makefiles`) and library extensions (e.g., `.so` instead of `.dll`).
 - Update this guide as new features are added (e.g., how to trigger alerts).
+- To use mobile camera for input we have used como studio 

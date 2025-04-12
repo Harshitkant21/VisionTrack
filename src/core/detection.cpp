@@ -3,8 +3,7 @@
 // detection.cpp
 #include "detection.h"
 
-YoloDetector::YoloDetector(const std::string &modelPath, const std::string &classesPath,
-                           float confThresh, float nmsThresh)
+Detection::Detection(const std::string &modelPath, const std::string &classesPath, float confThresh, float nmsThresh)
 {
     // Load the model
     try
@@ -42,12 +41,18 @@ YoloDetector::YoloDetector(const std::string &modelPath, const std::string &clas
     nmsThreshold = nmsThresh;
 }
 
-bool YoloDetector::detect(const cv::Mat &frame, std::vector<cv::Rect> &boxes,
-                          std::vector<int> &classIds, std::vector<float> &confidences)
+bool Detection::detect(const cv::Mat &frame, std::vector<cv::Rect> &boxes, std::vector<int> &classIds, std::vector<float> &confidences)
 {
+    // Original dimensions of the image
+    int original_width = frame.cols;
+    int original_height = frame.rows;
+
+    // Network input dimensions
+    int input_width = 640;
+    int input_height = 640;
+
     // Create blob from image
-    cv::Mat blob = cv::dnn::blobFromImage(frame, 1 / 255.0, cv::Size(640, 640),
-                                          cv::Scalar(0, 0, 0), true, false);
+    cv::Mat blob = cv::dnn::blobFromImage(frame, 1 / 255.0, cv::Size(input_width, input_height), cv::Scalar(0, 0, 0), true, false);
 
     // Set input
     net.setInput(blob);
@@ -65,8 +70,7 @@ bool YoloDetector::detect(const cv::Mat &frame, std::vector<cv::Rect> &boxes,
     }
 
     // Debug output shape
-    std::cout << "Output shape: " << outputs[0].size[0] << "x"
-              << outputs[0].size[1] << "x" << outputs[0].size[2] << std::endl;
+    std::cout << "Output shape: " << outputs[0].size[0] << "x" << outputs[0].size[1] << "x" << outputs[0].size[2] << std::endl;
 
     // Process output
     if (outputs.empty() || outputs[0].empty())
@@ -80,7 +84,11 @@ bool YoloDetector::detect(const cv::Mat &frame, std::vector<cv::Rect> &boxes,
     classIds.clear();
     confidences.clear();
 
-    // Format for YOLOv8 output: [1, 84, 8400] - transpose to [8400, 84]
+    // Calculate scale factors for mapping back to original image
+    float x_factor = static_cast<float>(original_width) / input_width;
+    float y_factor = static_cast<float>(original_height) / input_height;
+
+    // Format for YOLOv11 output - adjust according to actual output format
     cv::Mat output = outputs[0];
     cv::Mat transposed = output.reshape(1, output.size[1]);
     transposed = transposed.t();
@@ -91,39 +99,70 @@ bool YoloDetector::detect(const cv::Mat &frame, std::vector<cv::Rect> &boxes,
         float *row_ptr = transposed.ptr<float>(i);
 
         // Class scores start at index 4
-        cv::Mat scores(1, classNames.size(), CV_32F, row_ptr + 4);
+        int num_classes = classNames.size();
+        cv::Mat scores(1, num_classes, CV_32F, row_ptr + 4);
         cv::Point classIdPoint;
         double maxScore;
         cv::minMaxLoc(scores, nullptr, &maxScore, nullptr, &classIdPoint);
 
         if (maxScore > confThreshold)
         {
-            // Extract bounding box - assuming direct pixel coordinates
-            float x_center = row_ptr[0]; // center x in pixels
-            float y_center = row_ptr[1]; // center y in pixels
-            float width = row_ptr[2];    // width in pixels
-            float height = row_ptr[3];   // height in pixels
+            // Get raw box coordinates from model output
+            float x = row_ptr[0];
+            float y = row_ptr[1];
+            float w = row_ptr[2];
+            float h = row_ptr[3];
 
-            // Print values for debugging
-            std::cout << "Original box values: " << x_center << ", " << y_center << ", "
-                      << width << ", " << height << std::endl;
+            // Debug print the raw values
+            std::cout << "Raw box values from model: " << x << ", " << y << ", " << w << ", " << h << std::endl;
 
-            // Convert to top-left corner format
-            int left = static_cast<int>(x_center - width / 2);
-            int top = static_cast<int>(y_center - height / 2);
-            int box_width = static_cast<int>(width);
-            int box_height = static_cast<int>(height);
+            // YOLOv11 may output coordinates in different formats:
+            // 1. Normalized (0-1)
+            // 2. Relative to input size (0-640)
+            // 3. Direct pixel values for original image
+
+            // Assuming normalized coordinates (0-1) - most common for YOLO models
+            if (x <= 1.0 && y <= 1.0 && w <= 1.0 && h <= 1.0)
+            {
+                std::cout << "Detected normalized coordinates (0-1)" << std::endl;
+                // Scale to original image size
+                x *= original_width;
+                y *= original_height;
+                w *= original_width;
+                h *= original_height;
+            }
+            // If coordinates are relative to input size (0-640)
+            else if (x <= input_width && y <= input_height)
+            {
+                std::cout << "Detected input-relative coordinates (0-640)" << std::endl;
+                // Scale to original image size
+                x = x * x_factor;
+                y = y * y_factor;
+                w = w * x_factor;
+                h = h * y_factor;
+            }
+            // If coordinates are already in original image pixels, no scaling needed
+            else
+            {
+                std::cout << "Detected direct pixel coordinates" << std::endl;
+            }
+
+            // Convert center-width-height to top-left format
+            int left = static_cast<int>(x - w / 2);
+            int top = static_cast<int>(y - h / 2);
+            int width = static_cast<int>(w);
+            int height = static_cast<int>(h);
 
             // Ensure box is within image boundaries
-            left = std::max(0, std::min(frame.cols - 1, left));
-            top = std::max(0, std::min(frame.rows - 1, top));
-            box_width = std::min(frame.cols - left, box_width);
-            box_height = std::min(frame.rows - top, box_height);
+            left = std::max(0, std::min(original_width - 1, left));
+            top = std::max(0, std::min(original_height - 1, top));
+            width = std::min(original_width - left, width);
+            height = std::min(original_height - top, height);
 
             // Only add valid boxes
-            if (box_width > 0 && box_height > 0)
+            if (width > 0 && height > 0)
             {
-                boxes.push_back(cv::Rect(left, top, box_width, box_height));
+                boxes.push_back(cv::Rect(left, top, width, height));
                 classIds.push_back(classIdPoint.x);
                 confidences.push_back(static_cast<float>(maxScore));
             }
@@ -154,7 +193,7 @@ bool YoloDetector::detect(const cv::Mat &frame, std::vector<cv::Rect> &boxes,
     return !boxes.empty();
 }
 
-const std::vector<std::string> &YoloDetector::getClassNames() const
+const std::vector<std::string> &Detection::getClassNames() const
 {
     return classNames;
 }
