@@ -42,6 +42,8 @@ public:
     // Get velocity information for a specific track
     bool getVelocity(int trackId, float& vx, float& vy) const;
 
+    
+
 private:
     // Map of active tracks
     std::unordered_map<int, Track> tracks;

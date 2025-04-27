@@ -2,27 +2,37 @@
 #include "config.h"
 #include <fstream>
 #include <iostream>
+#include <filesystem>
+#include <system_error>
+#include <algorithm>
 
 Config::Config()
 {
     // Initialize with default values
-    settings["model_path"] = "models/yolo11n.onnx";
+    settings["model_path"] = "models/yolo8n.onnx";
     settings["classes_path"] = "models/coco.names";
     settings["confidence_threshold"] = "0.25";
     settings["nms_threshold"] = "0.45";
     settings["default_source"] = "0";
-    
+
     settings["show_trajectories"] = "true";
     settings["trajectory_length"] = "10";
     settings["show_velocity_vectors"] = "true";
-    settings["use_gpu"] = "true";
 }
 
 bool Config::loadFromFile(const std::string &filename)
 {
+    std::error_code ec;
+    if (!std::filesystem::exists(filename, ec) || !std::filesystem::is_regular_file(filename, ec))
+    {
+        std::cerr << "Invalid config file: " << filename << std::endl;
+        return false;
+    }
+
     std::ifstream file(filename);
     if (!file.is_open())
     {
+
         std::cerr << "Could not open config file: " << filename << std::endl;
         return false;
     }
@@ -106,14 +116,14 @@ bool Config::getBool(const std::string &key, bool defaultValue) const
     auto it = settings.find(key);
     if (it != settings.end())
     {
-        try
-        {
-            return std::stoi(it->second);
-        }
-        catch (...)
-        {
-            std::cerr << "Warning: Could not convert '" << key << "' value to int" << std::endl;
-        }
+        std::string value = it->second;
+        std::transform(value.begin(), value.end(), value.begin(), ::tolower); // make lowercase
+        if (value == "true" || value == "1")
+            return true;
+        if (value == "false" || value == "0")
+            return false;
+
+        std::cerr << "Warning: Invalid boolean value for '" << key << "'; using default" << std::endl;
     }
     return defaultValue;
 }

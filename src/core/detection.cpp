@@ -9,17 +9,19 @@ Detection::Detection(const std::string &modelPath, const std::string &classesPat
     try
     {
         net = cv::dnn::readNetFromONNX(modelPath);
-        std::cout << "Model loaded successfully: " << modelPath << std::endl;
+        if (net.empty())
+        {
+            throw std::runtime_error("Failed to load model from ONNX file");
+        }
+        std::cout << "Model loaded from: " << modelPath << std::endl;
+        net.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
+        net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
+        std::cout << "Model loaded successfully" << std::endl;
     }
-    catch (const cv::Exception &e)
+    catch (...)
     {
-        std::cerr << "Error loading model: " << e.what() << std::endl;
-        throw;
+        throw std::runtime_error("Failed to load detection model");
     }
-
-    // Set backend and target
-    net.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
-    net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
 
     // Load class names
     std::ifstream ifs(classesPath);
@@ -34,7 +36,17 @@ Detection::Detection(const std::string &modelPath, const std::string &classesPat
     }
     else
     {
-        std::cerr << "Error opening classes file: " << classesPath << std::endl;
+        throw std::runtime_error("Error opening classes file: " + classesPath);
+    }
+
+    // Validate input parameters
+    if (confThresh < 0.0f || confThresh > 1.0f)
+    {
+        throw std::invalid_argument("Confidence threshold must be between 0 and 1");
+    }
+    if (nmsThresh < 0.0f || nmsThresh > 1.0f)
+    {
+        throw std::invalid_argument("NMS threshold must be between 0 and 1");
     }
 
     confThreshold = confThresh;
@@ -43,6 +55,7 @@ Detection::Detection(const std::string &modelPath, const std::string &classesPat
 
 bool Detection::detect(const cv::Mat &frame, std::vector<cv::Rect> &boxes, std::vector<int> &classIds, std::vector<float> &confidences)
 {
+
     // Original dimensions of the image
     int original_width = frame.cols;
     int original_height = frame.rows;

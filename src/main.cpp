@@ -94,18 +94,15 @@ int main(int argc, char **argv)
     int trajectoryLength = config.getInt("trajectory_length", 10);
     bool showVelocityVectors = config.getBool("show_velocity_vectors", true);
 
-    // === 4. Try to use GPU acceleration if available ===
-    bool useGPU = config.getBool("use_gpu", true);
-
-    // === 5. Initialize detector ===
+        // === 4. Initialize detector ===
     Detection detector(modelPath, classesPath, confThreshold, nmsThreshold);
 
-    // === 6. Initialize tracker ===
+    // === 5. Initialize tracker ===
     Tracker tracker(maxDistThreshold, maxDisappeared);
     std::cout << "Initialized Kalman filter tracker with max distance: " << maxDistThreshold
               << ", max disappeared: " << maxDisappeared << std::endl;
 
-    // === 7. Initialize video capture ===
+    // === 6. Initialize video capture ===
     cv::VideoCapture cap;
 
     if (!videoPath.empty())
@@ -134,7 +131,7 @@ int main(int argc, char **argv)
         videoFPS = 30.0; // Default FPS if not available
     std::cout << "Video FPS: " << videoFPS << std::endl;
 
-    // === 8. Performance monitoring variables ===
+    // === 7. Performance monitoring variables ===
     int frameCount = 0;
     auto startTime = std::chrono::steady_clock::now();
     float fps = 0.0f;
@@ -142,7 +139,7 @@ int main(int argc, char **argv)
     // Track previous positions for trajectory visualization
     std::unordered_map<int, std::vector<cv::Point>> trajectories;
 
-    // === 9. Main loop ===
+    // === 8. Main loop ===
     cv::Mat frame;
     std::vector<cv::Rect> boxes;
     std::vector<int> classIds;
@@ -237,13 +234,18 @@ int main(int argc, char **argv)
 
             if (confidence > 0)
             {
-                ss << " " << std::fixed << std::setprecision(0) << confidence * 100 << "%";
+                ss << " " << std::fixed << std::setprecision(0) << confidence << "%";
             }
 
             if (hasVelocity)
             {
+                // float speed = std::sqrt(vx * vx + vy * vy);
+                // ss << " " << std::fixed << std::setprecision(1) << speed << "px/f";
                 float speed = std::sqrt(vx * vx + vy * vy);
-                ss << " " << std::fixed << std::setprecision(1) << speed << "px/f";
+                // Convert from pixels/frame to km/h
+                float pixelsToMeters = 0.1f; // Adjust based on your scene
+                float speedKmh = speed * pixelsToMeters * (3600.0f / videoFPS);
+                ss << " " << std::fixed << std::setprecision(1) << speedKmh << " km/h";
             }
 
             std::string label = ss.str();
@@ -317,7 +319,7 @@ int main(int argc, char **argv)
         auto frameEndTime = std::chrono::steady_clock::now();
         int processingTime = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  frameEndTime - frameStartTime)
-                                 .count();
+                                 .count(); 
 
         int waitTime = std::max(1, static_cast<int>(1000 / videoFPS) - processingTime);
 
