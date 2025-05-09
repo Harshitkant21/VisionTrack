@@ -8,16 +8,42 @@
 
 Config::Config()
 {
-    // Initialize with default values
+    //! Initialize with default values
+    
+    //file names
     settings["model_path"] = "models/yolo8n.onnx";
     settings["classes_path"] = "models/coco.names";
+
+    // Detection parameters
     settings["confidence_threshold"] = "0.25";
     settings["nms_threshold"] = "0.45";
     settings["default_source"] = "0";
+    settings["tracking_max_distance"]="50";
+    settings["tracking_max_frames_lost"]="5";
+    settings["tracking_overlap_threshold"]="0.7";
+    settings["reidentification_threshold"]="0.7";
+    settings["max_frames_keep_history"]="30";
+    settings["pixels_to_meters"]="0.1";
+    settings["video_fps"]="30.0"; 
 
+    // Speed parameters
+    settings["min_speed_kmh"]="1.0";
+    settings["max_speed_kmh"]="150.0";
+    settings["speed_normalization_factor"]="50.0";
+
+    // Display parameters
     settings["show_trajectories"] = "true";
     settings["trajectory_length"] = "10";
     settings["show_velocity_vectors"] = "true";
+    settings["velocity_vector_scale"]=2.0;
+    settings["font_scale"]=0.5;
+    settings["font_thickness"]=1;
+
+    // Alert parameters
+    settings["speed_limit"]="50.0";
+    settings["stopped_time_threshold"]="30.0";
+    settings["restricted_area_threshold"]="0.5";
+    settings["alert_display_time"]="60";
 }
 
 bool Config::loadFromFile(const std::string &filename)

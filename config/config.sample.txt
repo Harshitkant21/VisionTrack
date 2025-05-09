@@ -1,10 +1,37 @@
 # VisionTrack Configuration
+# File paths
 model_path=Your yolo model path 
 classes_path=Your coco file path
+
+# Detection parameters
 confidence_threshold=0.25
 nms_threshold=0.45
 default_source=0
 
+# Tracking parameters
+tracking_max_distance=50
+tracking_max_frames_lost=5
+tracking_overlap_threshold=0.7
+reidentification_threshold=0.7
+max_frames_keep_history=30
+pixels_to_meters=0.1
+video_fps=30.0
+
+# Speed calculation
+min_speed_kmh=1.0
+max_speed_kmh=150.0
+speed_normalization_factor=50.0
+
+# Display settings
 show_trajectories=true
 trajectory_length=10
 show_velocity_vectors=true
+velocity_vector_scale=2.0
+font_scale=0.5
+font_thickness=1
+
+# Alert parameters
+speed_limit=50.0
+stopped_time_threshold=30.0
+restricted_area_threshold=0.5
+alert_display_time=60

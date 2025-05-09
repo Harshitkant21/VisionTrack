@@ -3,6 +3,7 @@
 #include "detection.h"
 #include "config.h"
 #include "tracking.h" // Now includes Kalman filter tracking
+#include "util/alerts.h"
 #include <iostream>
 #include <iomanip> // For std::fixed and std::setprecision
 #include <chrono>  // For FPS calculation
@@ -82,25 +83,46 @@ int main(int argc, char **argv)
     // === 3. Get values from config ===
     std::string modelPath = config.get("model_path");
     std::string classesPath = config.get("classes_path");
+    // Detection parameters
     float confThreshold = config.getFloat("confidence_threshold", 0.25f);
     float nmsThreshold = config.getFloat("nms_threshold", 0.45f);
-
-    // Get tracking parameters from config (with defaults if not present)
     int maxDistThreshold = config.getInt("tracking_max_distance", 50);
     int maxDisappeared = config.getInt("tracking_max_frames_lost", 5);
+    float overlapThreshold = config.getFloat("tracking_overlap_threshold", 0.7f);
+    float reidThreshold = config.getFloat("reidentification_threshold", 0.7f);
+    int maxHistoryFrames = config.getInt("max_frames_keep_history", 30);
+    float pixelsToMeters = config.getFloat("pixels_to_meters", 0.1f);
+    float targetFPS = config.getFloat("video_fps", 30.0f);
+    float frameTime = 1.0f / targetFPS;
 
-    // Additional tracking parameters for Kalman filter
+    // Speed parameters
+    float minSpeedKmh = config.getFloat("min_speed_kmh", 1.0f);
+    float maxSpeedKmh = config.getFloat("max_speed_kmh", 150.0f);
+    float speedNormalization = config.getFloat("speed_normalization_factor", 50.0f);
+    // Display parameters
     bool showTrajectories = config.getBool("show_trajectories", true);
     int trajectoryLength = config.getInt("trajectory_length", 10);
     bool showVelocityVectors = config.getBool("show_velocity_vectors", true);
+    float velocityScale = config.getFloat("velocity_vector_scale", 2.0f);
+    float fontScale = config.getFloat("font_scale", 0.5f);
+    int fontThickness = config.getInt("font_thickness", 1);
 
-        // === 4. Initialize detector ===
+    // Alert parameters
+    float speedLimitKmh = config.getFloat("speed_limit", 50.0f);
+    float stoppedTimeThreshold = config.getFloat("stopped_time_threshold", 30.0f);
+    float restrictedAreaThreshold = config.getFloat("restricted_area_threshold", 0.5f);
+    int alertDisplayTime = config.getInt("alert_display_time", 60);
+
+    // === 4. Initialize detector ===
     Detection detector(modelPath, classesPath, confThreshold, nmsThreshold);
 
     // === 5. Initialize tracker ===
-    Tracker tracker(maxDistThreshold, maxDisappeared);
+    Tracker tracker(maxDistThreshold, maxDisappeared, pixelsToMeters, maxHistoryFrames, reidThreshold, frameTime);
     std::cout << "Initialized Kalman filter tracker with max distance: " << maxDistThreshold
               << ", max disappeared: " << maxDisappeared << std::endl;
+
+    // === 5.1 Initialize alert manager ===
+    AlertManager alertManager(speedLimitKmh, stoppedTimeThreshold, restrictedAreaThreshold);
 
     // === 6. Initialize video capture ===
     cv::VideoCapture cap;
@@ -126,15 +148,14 @@ int main(int argc, char **argv)
     }
 
     // Get video properties for FPS calculation
-    double videoFPS = cap.get(cv::CAP_PROP_FPS);
-    if (videoFPS < 1.0)
-        videoFPS = 30.0; // Default FPS if not available
-    std::cout << "Video FPS: " << videoFPS << std::endl;
+    double actualFPS = cap.get(cv::CAP_PROP_FPS);
+    if (actualFPS < 1.0)
+        actualFPS = targetFPS; // Default FPS if not available
+    std::cout << "Video FPS: " << actualFPS << std::endl;
 
     // === 7. Performance monitoring variables ===
     int frameCount = 0;
     auto startTime = std::chrono::steady_clock::now();
-    float fps = 0.0f;
 
     // Track previous positions for trajectory visualization
     std::unordered_map<int, std::vector<cv::Point>> trajectories;
@@ -178,6 +199,9 @@ int main(int argc, char **argv)
         std::cout << "Active tracks in this frame: " << tracks.size() << std::endl;
         */
 
+        // Restrict area for alerts (e.g., a rectangle in the center of the frame)
+        cv::Rect restrictedZone(100, 100, 200, 200); // Adjust coordinates as needed
+
         // Draw tracked objects
         for (const auto &[trackId, box] : tracks)
         {
@@ -194,7 +218,7 @@ int main(int argc, char **argv)
                 float overlap = (intersection.width * intersection.height) /
                                 static_cast<float>(box.width * box.height);
 
-                if (overlap > 0.7f)
+                if (overlap > overlapThreshold)
                 { // If 70% overlap, assume it's the same object
                     confidence = confidences[i];
                     break;
@@ -205,24 +229,27 @@ int main(int argc, char **argv)
             float vx = 0.0f, vy = 0.0f;
             bool hasVelocity = tracker.getVelocity(trackId, vx, vy);
 
-            // Calculate color based on velocity (red=fast, green=slow)
-            cv::Scalar color;
+            // Calculate speed in m/s
+            float speed_ms = 0.0f;
             if (hasVelocity)
             {
-                float speed = std::sqrt(vx * vx + vy * vy);
-                float maxSpeed = 20.0f; // Adjust based on your expected speed range
-                float speedRatio = std::min(speed / maxSpeed, 1.0f);
+                speed_ms = std::sqrt(vx * vx + vy * vy);
+            }
 
-                // Color gradient from green (slow) to yellow to red (fast)
-                color = cv::Scalar(
-                    0,                         // B
-                    255 * (1.0f - speedRatio), // G
-                    255                        // R
-                );
+            // Convert to km/h
+            float speed_kmh = speed_ms * 3.6f;
+
+            // Choose color based on speed
+            cv::Scalar color;
+            if (hasVelocity && speed_ms > 0.5f)
+            {
+                // Red for fast, yellow for medium, green for slow
+                float normalizedSpeed = std::min(speed_kmh / speedNormalization, 1.0f); // Normalize to 50 km/h
+                color = cv::Scalar(0, 255 * (1 - normalizedSpeed), 255);
             }
             else
             {
-                color = cv::Scalar(0, 255, 0); // Default green
+                color = cv::Scalar(0, 255, 0); // Green for stationary/slow objects
             }
 
             // Draw bounding box with color based on velocity
@@ -232,21 +259,56 @@ int main(int argc, char **argv)
             std::stringstream ss;
             ss << "ID " << trackId << ": " << className;
 
-            if (confidence > 0)
-            {
-                ss << " " << std::fixed << std::setprecision(0) << confidence << "%";
-            }
+            // if (confidence > 0)
+            // {
+            //     ss << " " << std::fixed << std::setprecision(0) << confidence << "%";
+            // }
 
             if (hasVelocity)
             {
-                // float speed = std::sqrt(vx * vx + vy * vy);
-                // ss << " " << std::fixed << std::setprecision(1) << speed << "px/f";
-                float speed = std::sqrt(vx * vx + vy * vy);
-                // Convert from pixels/frame to km/h
-                float pixelsToMeters = 0.1f; // Adjust based on your scene
-                float speedKmh = speed * pixelsToMeters * (3600.0f / videoFPS);
-                ss << " " << std::fixed << std::setprecision(1) << speedKmh << " km/h";
+                // float speed_ms = std::sqrt(vx * vx + vy * vy);
+                float speed_kmh = speed_ms * 3.6f; // Convert m/s to km/h
+
+                // Only show speed if it's reasonable
+                if (speed_kmh > minSpeedKmh && speed_kmh < maxSpeedKmh)
+                { // Reasonable speed range
+                    ss << " " << std::fixed << std::setprecision(1) << speed_kmh << " km/h";
+
+                    // Color based on speed
+                    float normalizedSpeed = std::min(speed_kmh / 50.0f, 1.0f);
+                    color = cv::Scalar(0, 255 * (1 - normalizedSpeed), 255);
+                }
+                else
+                {
+                    color = cv::Scalar(0, 255, 0); // Green for stationary/invalid speed
+                }
             }
+
+            // Check for alerts
+            if (hasVelocity)
+            {
+                // Check speed violation
+                alertManager.checkSpeedViolation(trackId, className, speed_kmh, box);
+
+                // Check restricted area
+                alertManager.checkRestrictedArea(trackId, className, box, restrictedZone);
+
+                // Check stopped vehicle
+                if (speed_ms < 0.5f)
+                {
+                    cv::Point2f pos(box.x + box.width / 2.0f, box.y + box.height / 2.0f);
+                    alertManager.checkStoppedVehicle(trackId, className, pos, box);
+                }
+            }
+
+            // Clean old alerts
+            alertManager.clearOldAlerts(60); // Remove alerts older than 60 seconds
+
+            // Draw alerts
+            alertManager.drawAlerts(frame);
+
+            // Get active alerts as JSON for UI
+            std::string alertsJson = alertManager.getAlertsAsJson();
 
             std::string label = ss.str();
 
@@ -258,7 +320,7 @@ int main(int argc, char **argv)
                           cv::Point(box.x + labelSize.width, box.y),
                           cv::Scalar(255, 255, 255), cv::FILLED);
             cv::putText(frame, label, cv::Point(box.x, box.y - baseLine - 5),
-                        cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0), 1);
+                        cv::FONT_HERSHEY_SIMPLEX, fontScale, cv::Scalar(0, 0, 0), fontThickness);
 
             // Store trajectory point
             cv::Point center(box.x + box.width / 2, box.y + box.height / 2);
@@ -288,40 +350,32 @@ int main(int argc, char **argv)
             }
 
             // Draw predicted trajectory (if object has velocity and prediction enabled)
-            if (showVelocityVectors && hasVelocity && (std::abs(vx) > 0.5 || std::abs(vy) > 0.5))
+            if (showVelocityVectors && hasVelocity && speed_ms > 0.5f)
             {
-                cv::Point future = center + cv::Point(vx * 10, vy * 10); // Predict 10 frames ahead
+                cv::Point center(box.x + box.width / 2, box.y + box.height / 2);
+                cv::Point future = center + cv::Point(static_cast<int>(vx * velocityScale), static_cast<int>(vy * velocityScale));
                 cv::arrowedLine(frame, center, future, cv::Scalar(0, 255, 255), 2);
             }
         }
 
         // Calculate and display FPS
-        frameCount++;
-        auto currentTime = std::chrono::steady_clock::now();
-        float timeDiff = std::chrono::duration<float>(currentTime - startTime).count();
-
-        if (timeDiff >= 1.0f)
-        {
-            fps = frameCount / timeDiff;
-            frameCount = 0;
-            startTime = currentTime;
-        }
-
-        // Draw FPS counter on frame
-        std::string fpsText = "FPS: " + std::to_string(static_cast<int>(fps));
-        cv::putText(frame, fpsText, cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX,
-                    1.0, cv::Scalar(0, 255, 0), 2);
+        auto frameEndTime = std::chrono::steady_clock::now();
+        float currentFPS = 1000.0f / std::chrono::duration_cast<std::chrono::milliseconds>(
+                                         frameEndTime - frameStartTime)
+                                         .count();
+        cv::putText(frame, "FPS: " + std::to_string(static_cast<int>(currentFPS)),
+                    cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 1.0,
+                    cv::Scalar(0, 255, 0), 2);
 
         // Display frame
         cv::imshow("VisionTrack", frame);
 
         // Calculate how much time we should wait to maintain consistent framerate
-        auto frameEndTime = std::chrono::steady_clock::now();
         int processingTime = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  frameEndTime - frameStartTime)
-                                 .count(); 
+                                 .count();
 
-        int waitTime = std::max(1, static_cast<int>(1000 / videoFPS) - processingTime);
+        int waitTime = std::max(1, static_cast<int>(1000 / actualFPS) - processingTime);
 
         // Check for user input (ESC to exit)
         char key = cv::waitKey(waitTime);
