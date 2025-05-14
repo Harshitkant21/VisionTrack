@@ -17,6 +17,40 @@ This guide provides step-by-step instructions to set up, build, and run VisionTr
   - Add CMake’s `bin/` folder (e.g., `C:/Program Files/CMake/bin/`) to your system PATH.
 - **Git**: Install from git-scm.com if not already present.
 - **Webcam**: Ensure your webcam is connected and drivers are installed.
+- **YOLOv8 (Model Preparation Only)**: We use the [Ultralytics YOLOv8](https://github.com/ultralytics/ultralytics) Python package only to **export the model to ONNX format** for use in our C++ project.
+
+  1. Install the package (in a separate Python environment):
+     ```bash
+     pip install ultralytics
+     ```
+
+  2. Export a pretrained model to ONNX:
+     ```bash
+      #Load the model
+     from ultralytics import YOLO
+     model = YOLO("yolo8n.pt")
+     ```
+     ```bash
+     # Export the model to ONNX format
+      model.export(format="onnx", dynamic=True)
+     ```
+     - You can also use `yolov8s.pt` or other variants depending on accuracy and size needs.
+     - This command will generate a file like `yolov8n.onnx`.
+
+  3. Move the `.onnx` file into the project under:
+     ```
+     VisionTrack/model/yolov11n.onnx
+     ```
+
+  4. Also include the `coco.names` file (class labels for COCO dataset) in the same `model/` folder:
+     ```
+     VisionTrack/model/coco.names
+     ```
+
+     > You can get this file from [here](https://github.com/pjreddie/darknet/blob/master/data/coco.names) or generate it manually. It must match the labels used in the YOLO model.
+
+  ✅ Once the model is in ONNX format and the `coco.names` file is added, no Python is required during runtime.
+
 
 ### Step 3: Configure with CMake
 - Open a terminal in `D:/Projects/VisionTrack/` (adjust to your project path).
@@ -90,3 +124,4 @@ This guide provides step-by-step instructions to set up, build, and run VisionTr
 ## Notes
 - This setup uses MinGW Makefiles for Windows. If using Linux/macOS, adjust the generator (e.g., `Unix Makefiles`) and library extensions (e.g., `.so` instead of `.dll`).
 - Update this guide as new features are added (e.g., how to trigger alerts).
+- To use mobile camera for input we have used como studio 
