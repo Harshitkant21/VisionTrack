@@ -1,14 +1,11 @@
 #include <stdlib.h>
-#include <cfloat> // for DBL_MAX
-#include <cmath>  // for fabs()
+#include <cfloat>
+#include <cmath>
 #include "Hungarian.h"
 
 HungarianAlgorithm::HungarianAlgorithm() {}
 HungarianAlgorithm::~HungarianAlgorithm() {}
 
-//********************************************************//
-// A single function wrapper for solving assignment problem.
-//********************************************************//
 double HungarianAlgorithm::Solve(vector<vector<double>> &DistMatrix, vector<int> &Assignment)
 {
     unsigned int nRows = DistMatrix.size();
@@ -18,10 +15,7 @@ double HungarianAlgorithm::Solve(vector<vector<double>> &DistMatrix, vector<int>
     int *assignment = new int[nRows];
     double cost = 0.0;
 
-    // Fill in the distMatrixIn. Mind the index is "i + nRows * j".
-    // Here the cost matrix of size MxN is defined as a double precision array of N*M elements.
-    // In the solving functions matrices are seen to be saved MATLAB-internally in row-order.
-    // (i.e. the matrix [1 2; 3 4] will be stored as a vector [1 3 2 4], NOT [1 2 3 4]).
+    // check if matrix is square
     for (unsigned int i = 0; i < nRows; i++)
         for (unsigned int j = 0; j < nCols; j++)
             distMatrixIn[i + nRows * j] = DistMatrix[i][j];
@@ -38,22 +32,19 @@ double HungarianAlgorithm::Solve(vector<vector<double>> &DistMatrix, vector<int>
     return cost;
 }
 
-//********************************************************//
-// Solve optimal solution for assignment problem using Munkres algorithm, also known as Hungarian Algorithm.
-//********************************************************//
 void HungarianAlgorithm::assignmentoptimal(int *assignment, double *cost, double *distMatrixIn, int nOfRows, int nOfColumns)
 {
     double *distMatrix, *distMatrixTemp, *distMatrixEnd, *columnEnd, value, minValue;
     bool *coveredColumns, *coveredRows, *starMatrix, *newStarMatrix, *primeMatrix;
     int nOfElements, minDim, row, col;
 
-    /* initialization */
+    // initialization
     *cost = 0;
     for (row = 0; row < nOfRows; row++)
         assignment[row] = -1;
 
-    /* generate working copy of distance Matrix */
-    /* check if all matrix elements are positive */
+    // generate working copy of distance Matrix
+    // check if all matrix elements are positive
     nOfElements = nOfRows * nOfColumns;
     distMatrix = (double *)malloc(nOfElements * sizeof(double));
     distMatrixEnd = distMatrix + nOfElements;
@@ -168,7 +159,6 @@ void HungarianAlgorithm::assignmentoptimal(int *assignment, double *cost, double
     return;
 }
 
-/********************************************************/
 void HungarianAlgorithm::buildassignmentvector(int *assignment, bool *starMatrix, int nOfRows, int nOfColumns)
 {
     int row, col;
@@ -344,7 +334,7 @@ void HungarianAlgorithm::step4(int *assignment, double *distMatrix, bool *starMa
     step2a(assignment, distMatrix, starMatrix, newStarMatrix, primeMatrix, coveredColumns, coveredRows, nOfRows, nOfColumns, minDim);
 }
 
-/********************************************************/
+
 void HungarianAlgorithm::step5(int *assignment, double *distMatrix, bool *starMatrix, bool *newStarMatrix, bool *primeMatrix, bool *coveredColumns, bool *coveredRows, int nOfRows, int nOfColumns, int minDim)
 {
     double h, value;

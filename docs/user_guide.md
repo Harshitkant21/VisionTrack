@@ -17,7 +17,7 @@ This guide provides step-by-step instructions to set up, build, and run VisionTr
   - Add CMake’s `bin/` folder (e.g., `C:/Program Files/CMake/bin/`) to your system PATH.
 - **Git**: Install from git-scm.com if not already present.
 - **Webcam**: Ensure your webcam is connected and drivers are installed.
-- **YOLOv8 (Model Preparation Only)**: We use the [Ultralytics YOLOv11](https://github.com/ultralytics/ultralytics) Python package only to **export the model to ONNX format** for use in our C++ project.
+- **YOLOv8 (Model Preparation Only)**: We use the [Ultralytics YOLOv8](https://github.com/ultralytics/ultralytics) Python package only to **export the model to ONNX format** for use in our C++ project.
 
   1. Install the package (in a separate Python environment):
      ```bash
@@ -28,14 +28,14 @@ This guide provides step-by-step instructions to set up, build, and run VisionTr
      ```bash
       #Load the model
      from ultralytics import YOLO
-     model = YOLO("yolo11n.pt")
+     model = YOLO("yolo8n.pt")
      ```
      ```bash
      # Export the model to ONNX format
       model.export(format="onnx", dynamic=True)
      ```
-     - You can also use `yolov11s.pt` or other variants depending on accuracy and size needs.
-     - This command will generate a file like `yolov11n.onnx`.
+     - You can also use `yolov8s.pt` or other variants depending on accuracy and size needs.
+     - This command will generate a file like `yolov8n.onnx`.
 
   3. Move the `.onnx` file into the project under:
      ```

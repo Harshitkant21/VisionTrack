@@ -101,7 +101,7 @@ bool Detection::detect(const cv::Mat &frame, std::vector<cv::Rect> &boxes, std::
     float x_factor = static_cast<float>(original_width) / input_width;
     float y_factor = static_cast<float>(original_height) / input_height;
 
-    // Format for YOLOv11 output - adjust according to actual output format
+    // Format for YOLOv8 output
     cv::Mat output = outputs[0];
     cv::Mat transposed = output.reshape(1, output.size[1]);
     transposed = transposed.t();
@@ -128,11 +128,6 @@ bool Detection::detect(const cv::Mat &frame, std::vector<cv::Rect> &boxes, std::
 
             // Debug print the raw values
             std::cout << "Raw box values from model: " << x << ", " << y << ", " << w << ", " << h << std::endl;
-
-            // YOLOv11 may output coordinates in different formats:
-            // 1. Normalized (0-1)
-            // 2. Relative to input size (0-640)
-            // 3. Direct pixel values for original image
 
             // Assuming normalized coordinates (0-1) - most common for YOLO models
             if (x <= 1.0 && y <= 1.0 && w <= 1.0 && h <= 1.0)
@@ -210,3 +205,4 @@ const std::vector<std::string> &Detection::getClassNames() const
 {
     return classNames;
 }
+

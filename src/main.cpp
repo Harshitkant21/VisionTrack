@@ -2,18 +2,22 @@
 
 #include "detection.h"
 #include "config.h"
-#include "tracking.h" // Now includes Kalman filter tracking
+#include "tracking.h"
 #include "util/alerts.h"
+#include "util/video.h"
 #include <iostream>
-#include <iomanip> // For std::fixed and std::setprecision
-#include <chrono>  // For FPS calculation
+#include <iomanip>
+#include <chrono>
+#include <sstream>
+#include <unordered_map>
+
+bool running = true;
 
 int main(int argc, char **argv)
 {
-    // === 1. Parse arguments ===
+    //! === 1. Parse command line arguments ===
     std::string configFile = "config.txt";
     std::string videoPath = "";
-    // std::string source = "webcam"; // default
     int camIndex = -1;
 
     for (int i = 1; i < argc; ++i)
@@ -39,26 +43,8 @@ int main(int argc, char **argv)
             }
         }
     }
-    // for (int i = 1; i < argc; ++i) {
-    //     std::string arg = argv[i];
-    //     if (arg.find("--source=") != std::string::npos) {
-    //         source = arg.substr(arg.find("=") + 1);
-    //     } else if (arg.find("--video=") != std::string::npos) {
-    //         videoPath = arg.substr(arg.find("=") + 1);
-    //     }
-    // }
 
-    // // Choose camIndex based on selected source
-    // if (source == "webcam") {
-    //     camIndex = 0; // usually laptop webcam
-    // } else if (source == "phone") {
-    //     camIndex = 2; // usually Camo, but verify via test
-    // } else {
-    //     std::cerr << "Invalid source specified. Use --source=webcam or --source=phone" << std::endl;
-    //     return -1;
-    // }
-
-    // === 2. Load configuration ===
+    //! === 2. Load configuration ===
     Config config;
     std::vector<std::string> searchPaths = {
         "./", "../", "../../",
@@ -80,7 +66,8 @@ int main(int argc, char **argv)
         std::cout << "Using default configuration" << std::endl;
     }
 
-    // === 3. Get values from config ===
+    //! === 3. Get values from config ===
+
     std::string modelPath = config.get("model_path");
     std::string classesPath = config.get("classes_path");
     // Detection parameters
@@ -99,6 +86,7 @@ int main(int argc, char **argv)
     float minSpeedKmh = config.getFloat("min_speed_kmh", 1.0f);
     float maxSpeedKmh = config.getFloat("max_speed_kmh", 150.0f);
     float speedNormalization = config.getFloat("speed_normalization_factor", 50.0f);
+
     // Display parameters
     bool showTrajectories = config.getBool("show_trajectories", true);
     int trajectoryLength = config.getInt("trajectory_length", 10);
@@ -113,18 +101,22 @@ int main(int argc, char **argv)
     float restrictedAreaThreshold = config.getFloat("restricted_area_threshold", 0.5f);
     int alertDisplayTime = config.getInt("alert_display_time", 60);
 
-    // === 4. Initialize detector ===
+    // Recording parameters
+    std::string outputDir = config.get("video_output_path", "outputs/");
+    std::string codec = config.get("video_codec", "XVID");
+    bool recordOnStartup = config.getBool("record_on_startup", false);
+    bool recordWithAnnotations = config.getBool("record_with_annotations", true);
+
+    //! === 4. Initialize detector ===
     Detection detector(modelPath, classesPath, confThreshold, nmsThreshold);
 
-    // === 5. Initialize tracker ===
+    //! === 5. Initialize tracker ===
     Tracker tracker(maxDistThreshold, maxDisappeared, pixelsToMeters, maxHistoryFrames, reidThreshold, frameTime);
-    std::cout << "Initialized Kalman filter tracker with max distance: " << maxDistThreshold
-              << ", max disappeared: " << maxDisappeared << std::endl;
 
-    // === 5.1 Initialize alert manager ===
+    //! === 6. Initialize alert manager ===
     AlertManager alertManager(speedLimitKmh, stoppedTimeThreshold, restrictedAreaThreshold);
 
-    // === 6. Initialize video capture ===
+    //! === 7. Initialize video capture ===
     cv::VideoCapture cap;
 
     if (!videoPath.empty())
@@ -153,20 +145,17 @@ int main(int argc, char **argv)
         actualFPS = targetFPS; // Default FPS if not available
     std::cout << "Video FPS: " << actualFPS << std::endl;
 
-    // === 7. Performance monitoring variables ===
-    int frameCount = 0;
-    auto startTime = std::chrono::steady_clock::now();
-
     // Track previous positions for trajectory visualization
     std::unordered_map<int, std::vector<cv::Point>> trajectories;
 
-    // === 8. Main loop ===
+    //! === 8. Main loop ===
     cv::Mat frame;
     std::vector<cv::Rect> boxes;
     std::vector<int> classIds;
     std::vector<float> confidences;
+    cv::Rect restrictedZone(100, 100, 200, 200);
 
-    while (true)
+    while (running)
     {
         // Measure start time for this frame
         auto frameStartTime = std::chrono::steady_clock::now();
@@ -183,24 +172,6 @@ int main(int argc, char **argv)
 
         // Update tracking with new detections
         std::vector<std::pair<int, cv::Rect>> tracks = tracker.update(boxes, classIds);
-
-        // Debug output for detections (uncomment if needed)
-        /*
-        std::cout << "Detections in this frame: " << boxes.size() << std::endl;
-        for (size_t i = 0; i < boxes.size(); ++i)
-        {
-            std::cout << "Box " << i << ": " << boxes[i].x << ", " << boxes[i].y
-                      << ", " << boxes[i].width << ", " << boxes[i].height
-                      << " Class: " << classIds[i]
-                      << " Conf: " << confidences[i] << std::endl;
-        }
-
-        // Debug output for tracks
-        std::cout << "Active tracks in this frame: " << tracks.size() << std::endl;
-        */
-
-        // Restrict area for alerts (e.g., a rectangle in the center of the frame)
-        cv::Rect restrictedZone(100, 100, 200, 200); // Adjust coordinates as needed
 
         // Draw tracked objects
         for (const auto &[trackId, box] : tracks)
@@ -258,11 +229,6 @@ int main(int argc, char **argv)
             // Create label with ID, class name, confidence and speed
             std::stringstream ss;
             ss << "ID " << trackId << ": " << className;
-
-            // if (confidence > 0)
-            // {
-            //     ss << " " << std::fixed << std::setprecision(0) << confidence << "%";
-            // }
 
             if (hasVelocity)
             {

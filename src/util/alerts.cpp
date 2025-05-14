@@ -59,9 +59,7 @@ void AlertManager::checkStoppedVehicle(int trackId, const std::string &className
     }
     else
     {
-        auto stoppedDuration = std::chrono::duration_cast<std::chrono::seconds>(
-                                   now - stoppedVehicles[trackId])
-                                   .count();
+        auto stoppedDuration = std::chrono::duration_cast<std::chrono::seconds>(now - stoppedVehicles[trackId]).count();
 
         if (stoppedDuration > stoppedTimeThreshold)
         {
@@ -80,21 +78,16 @@ void AlertManager::checkStoppedVehicle(int trackId, const std::string &className
 
 void AlertManager::drawAlerts(cv::Mat &frame)
 {
-    int yOffset = 30; // Starting Y position for alerts
+    int yOffset = 30;
 
     for (const auto &alert : activeAlerts)
     {
-        // Draw alert box
-        cv::rectangle(frame, alert.location, cv::Scalar(0, 0, 255), 2);
-
         // Prepare alert text
-        std::string displayText = "ID " + std::to_string(alert.trackId) +
-                                  ": " + alert.message;
+        std::string displayText = "ID " + std::to_string(alert.trackId) + ": " + alert.message;
 
         // Draw text background
         int baseLine;
-        cv::Size textSize = cv::getTextSize(displayText, cv::FONT_HERSHEY_SIMPLEX,
-                                            0.6, 2, &baseLine);
+        cv::Size textSize = cv::getTextSize(displayText, cv::FONT_HERSHEY_SIMPLEX, 0.6, 2, &baseLine);
 
         cv::rectangle(frame,
                       cv::Point(10, yOffset - textSize.height),
@@ -181,3 +174,4 @@ std::string AlertManager::generateAlertMessage(const Alert &alert) const
     ss << "Alert: " << alert.message;
     return ss.str();
 }
+

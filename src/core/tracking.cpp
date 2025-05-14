@@ -23,258 +23,28 @@ Tracker::Tracker(int maxDistThreshold, int maxDisappeared,
               << ", max disappeared: " << maxDisappeared << std::endl;
 }
 
-// std::vector<std::pair<int, cv::Rect>> Tracker::update(const std::vector<cv::Rect> &boxes, const std::vector<int> &classIds)
-// {
-//     // Result vector with <ID, Rect> pairs
-//     std::vector<std::pair<int, cv::Rect>> trackedObjects;
-
-//     // First, predict new positions for all existing tracks using Kalman filter
-//     for (auto &[id, track] : tracks)
-//     {
-//         // Predict new position
-//         cv::Rect predictedBox = predictKalmanFilter(track);
-
-//         // Update track with prediction (will be corrected later if detection found)
-//         track.rect = predictedBox;
-//         track.centroid = calculateCentroid(predictedBox);
-//     }
-
-//     // If no detections, increment disappeared counter for all existing tracks
-//     if (boxes.empty())
-//     {
-//         std::vector<int> idsToRemove;
-
-//         for (auto &[id, track] : tracks)
-//         {
-//             track.framesLost++;
-
-//             // Check if we should remove this track
-//             if (track.framesLost > maxDisappeared)
-//             {
-//                 idsToRemove.push_back(id);
-//             }
-//             else
-//             {
-//                 // Keep the track with its predicted position
-//                 trackedObjects.push_back(std::make_pair(id, track.rect));
-//             }
-//         }
-
-//         // Remove tracks that have been missing for too long
-//         for (int id : idsToRemove)
-//         {
-//             std::cout << "Removed track ID " << id << " due to disappearance" << std::endl;
-//             tracks.erase(id);
-//         }
-
-//         return trackedObjects;
-//     }
-
-//     // Calculate centroids for current detections
-//     std::vector<cv::Point2f> inputCentroids;
-//     for (const auto &box : boxes)
-//     {
-//         inputCentroids.push_back(calculateCentroid(box));
-//     }
-
-//     // If we currently aren't tracking any objects, register all of them
-//     if (tracks.empty())
-//     {
-//         for (size_t i = 0; i < boxes.size(); i++)
-//         {
-//             Track newTrack;
-//             newTrack.id = nextId;
-//             newTrack.rect = boxes[i];
-//             newTrack.centroid = inputCentroids[i];
-//             newTrack.classId = classIds[i];
-//             newTrack.framesLost = 0;
-//             newTrack.vx = 0.0f;
-//             newTrack.vy = 0.0f;
-
-//             // Initialize Kalman filter for this track
-//             newTrack.kalman = initializeKalmanFilter(boxes[i]);
-
-//             tracks[nextId] = newTrack;
-//             trackedObjects.push_back(std::make_pair(nextId, boxes[i]));
-
-//             std::cout << "Registered new track ID " << nextId << " of class " << classIds[i] << std::endl;
-//             nextId++;
-//         }
-//     }
-//     // Otherwise, match new detections to existing objects
-//     else
-//     {
-//         // Get IDs of existing tracks
-//         std::vector<int> trackIds;
-//         std::vector<cv::Point2f> existingCentroids;
-
-//         for (const auto &[id, track] : tracks)
-//         {
-//             trackIds.push_back(id);
-//             existingCentroids.push_back(track.centroid);
-//         }
-
-//         // Compute distance matrix between existing predicted positions and new detections
-//         std::vector<std::vector<float>> D(trackIds.size(), std::vector<float>(inputCentroids.size()));
-
-//         for (size_t i = 0; i < trackIds.size(); i++)
-//         {
-//             for (size_t j = 0; j < inputCentroids.size(); j++)
-//             {
-//                 D[i][j] = calculateDistance(existingCentroids[i], inputCentroids[j]);
-//             }
-//         }
-
-//         // Find minimum distance for each row and column
-//         std::vector<int> rowIndices;
-//         std::vector<int> colIndices;
-
-//         // Find the smallest distances using a greedy algorithm
-//         // (Could be improved with Hungarian algorithm for optimal assignment)
-//         while (true)
-//         {
-//             float minDist = std::numeric_limits<float>::max();
-//             int minRow = -1;
-//             int minCol = -1;
-
-//             // Find the minimum distance in the remaining rows and columns
-//             for (size_t i = 0; i < D.size(); i++)
-//             {
-//                 if (std::find(rowIndices.begin(), rowIndices.end(), i) != rowIndices.end())
-//                 {
-//                     continue;
-//                 }
-
-//                 for (size_t j = 0; j < D[i].size(); j++)
-//                 {
-//                     if (std::find(colIndices.begin(), colIndices.end(), j) != colIndices.end())
-//                     {
-//                         continue;
-//                     }
-
-//                     if (D[i][j] < minDist)
-//                     {
-//                         minDist = D[i][j];
-//                         minRow = i;
-//                         minCol = j;
-//                     }
-//                 }
-//             }
-
-//             // If we couldn't find any more minimum values, break
-//             if (minRow == -1 || minCol == -1)
-//             {
-//                 break;
-//             }
-
-//             // Add to our matches if the distance is within threshold
-//             if (minDist <= maxDistance)
-//             {
-//                 rowIndices.push_back(minRow);
-//                 colIndices.push_back(minCol);
-//             }
-//             else
-//             {
-//                 break;
-//             }
-//         }
-
-//         // Used to keep track of rows and columns we've already examined
-//         std::set<int> usedRows(rowIndices.begin(), rowIndices.end());
-//         std::set<int> usedCols(colIndices.begin(), colIndices.end());
-
-//         // Update matched existing tracks
-//         for (size_t i = 0; i < rowIndices.size(); i++)
-//         {
-//             int trackId = trackIds[rowIndices[i]];
-//             int detectionIdx = colIndices[i];
-
-//             // Update the Kalman filter with the new detection
-//             updateKalmanFilter(tracks[trackId], boxes[detectionIdx]);
-
-//             // Update track with new position and reset lost counter
-//             tracks[trackId].rect = boxes[detectionIdx];
-//             tracks[trackId].centroid = inputCentroids[detectionIdx];
-
-//             // Class ID voting (maintain consistency by not changing class on every frame)
-//             // Only update class if detection confidence is high or track is new
-//             if (tracks[trackId].framesLost > 2)
-//             {
-//                 tracks[trackId].classId = classIds[detectionIdx];
-//             }
-
-//             tracks[trackId].framesLost = 0;
-
-//             std::cout << "Updated track ID " << trackId << " to new position" << std::endl;
-//         }
-
-//         // Register unmatched detections as new tracks
-//         for (size_t j = 0; j < inputCentroids.size(); j++)
-//         {
-//             if (usedCols.find(j) != usedCols.end())
-//             {
-//                 continue;
-//             }
-
-//             // Create new track
-//             Track newTrack;
-//             newTrack.id = nextId;
-//             newTrack.rect = boxes[j];
-//             newTrack.centroid = inputCentroids[j];
-//             newTrack.classId = classIds[j];
-//             newTrack.framesLost = 0;
-//             newTrack.vx = 0.0f;
-//             newTrack.vy = 0.0f;
-
-//             // Initialize Kalman filter for this track
-//             newTrack.kalman = initializeKalmanFilter(boxes[j]);
-
-//             tracks[nextId] = newTrack;
-
-//             std::cout << "Registered new track ID " << nextId << " of class " << classIds[j] << std::endl;
-//             nextId++;
-//         }
-
-//         // Update unmatched tracks (mark as lost)
-//         std::vector<int> idsToRemove;
-
-//         for (size_t i = 0; i < trackIds.size(); i++)
-//         {
-//             if (usedRows.find(i) != usedRows.end())
-//             {
-//                 continue;
-//             }
-
-//             int trackId = trackIds[i];
-//             tracks[trackId].framesLost++;
-
-//             // Check if we should remove this track
-//             if (tracks[trackId].framesLost > maxDisappeared)
-//             {
-//                 idsToRemove.push_back(trackId);
-//             }
-//         }
-
-//         // Remove tracks that have been missing for too long
-//         for (int id : idsToRemove)
-//         {
-//             std::cout << "Removed track ID " << id << " due to disappearance" << std::endl;
-//             tracks.erase(id);
-//         }
-
-//         // Create the final result with all current tracks
-//         for (const auto &[id, track] : tracks)
-//         {
-//             trackedObjects.push_back(std::make_pair(id, track.rect));
-//         }
-//     }
-
-//     return trackedObjects;
-// }
-
+// Update the tracker with new detections
 std::vector<std::pair<int, cv::Rect>> Tracker::update(const std::vector<cv::Rect> &boxes, const std::vector<int> &classIds)
 {
     std::vector<std::pair<int, cv::Rect>> trackedObjects;
+
+    std::cout << "Updating tracker with " << boxes.size() << " boxes, current tracks: " << tracks.size() << std::endl;
+
+    if (boxes.empty())
+    {
+        handleLostTracks(trackedObjects);
+        return trackedObjects;
+    }
+    // If no existing tracks, create new ones
+    if (tracks.empty())
+    {
+        for (size_t i = 0; i < boxes.size(); i++)
+        {
+            cv::Point2f centroid = calculateCentroid(boxes[i]);
+            createNewTrack(boxes[i], classIds[i], centroid, trackedObjects);
+        }
+        return trackedObjects;
+    }
 
     // First update all existing tracks with Kalman prediction
     for (auto &[id, track] : tracks)
@@ -282,13 +52,6 @@ std::vector<std::pair<int, cv::Rect>> Tracker::update(const std::vector<cv::Rect
         cv::Rect predictedBox = predictKalmanFilter(track);
         track.rect = predictedBox;
     }
-
-    if (boxes.empty())
-    {
-        handleLostTracks(trackedObjects);
-        return trackedObjects;
-    }
-
     // Build cost matrix using IoU
     vector<vector<double>> costMatrix;
     vector<int> trackIds;
@@ -341,15 +104,6 @@ std::vector<std::pair<int, cv::Rect>> Tracker::update(const std::vector<cv::Rect
                 cv::Point2f centroid = calculateCentroid(boxes[i]);
                 createNewTrack(boxes[i], classIds[i], centroid, trackedObjects);
             }
-        }
-    }
-    else if (tracks.empty())
-    {
-        // If no existing tracks, create new ones for all detections
-        for (size_t i = 0; i < boxes.size(); i++)
-        {
-            cv::Point2f centroid = calculateCentroid(boxes[i]);
-            createNewTrack(boxes[i], classIds[i], centroid, trackedObjects);
         }
     }
 
@@ -413,14 +167,27 @@ void Tracker::handleLostTracks(std::vector<std::pair<int, cv::Rect>> &trackedObj
 void Tracker::createNewTrack(const cv::Rect &box, int classId, const cv::Point2f &centroid,
                              std::vector<std::pair<int, cv::Rect>> &trackedObjects)
 {
+
+    // Check if track already exists for this object
+    for (const auto &[id, track] : tracks)
+    {
+        float iou = calculateIoU(track.rect, box);
+        if (iou > reidentificationThreshold)
+        {
+            // Track already exists, don't create a new one
+            trackedObjects.emplace_back(id, box);
+            return;
+        }
+    }
+
     // Try to reidentify from recently lost tracks
     int reidId = -1;
-    float bestIoU = 0.5f;
+    float bestIoU = reidentificationThreshold;
 
     for (const auto &[id, history] : recentlyLostTracks)
     {
         if (history.classId == classId &&
-            history.framesSinceDelete < 10)
+            history.framesSinceDelete < maxFramesToKeepHistory)
         { // Only consider recently lost tracks
             float iou = calculateIoU(box, history.lastRect);
             if (iou > reidentificationThreshold && iou > bestIoU)
@@ -439,11 +206,6 @@ void Tracker::createNewTrack(const cv::Rect &box, int classId, const cv::Point2f
     }
     else
     {
-        // Ensure sequential IDs
-        while (tracks.find(nextId) != tracks.end())
-        {
-            nextId++;
-        }
         newTrack.id = nextId++;
     }
 
@@ -455,8 +217,11 @@ void Tracker::createNewTrack(const cv::Rect &box, int classId, const cv::Point2f
     newTrack.vy = 0.0f;
     newTrack.kalman = initializeKalmanFilter(box);
 
-    tracks[newTrack.id] = newTrack;
-    trackedObjects.emplace_back(newTrack.id, box);
+    if (tracks.find(newTrack.id) == tracks.end())
+    {
+        tracks[newTrack.id] = newTrack;
+        trackedObjects.emplace_back(newTrack.id, box);
+    }
 }
 
 void Tracker::createNewTracks(const std::vector<cv::Rect> &boxes,

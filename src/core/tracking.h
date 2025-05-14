@@ -44,7 +44,7 @@ public:
     Tracker(int maxDistThreshold = 50, int maxDisappeared = 5, float pixelsToMeters = 0.1f, int maxHistoryFrames = 30,
             float reidThreshold = 0.7f, float frameTime = 1.0f / 30.0f);
 
-    // Update tracking with new detections, returns vector of track IDs and bounding boxes
+        // Update tracking with new detections, returns vector of track IDs and bounding boxes
     std::vector<std::pair<int, cv::Rect>> update(const std::vector<cv::Rect> &boxes, const std::vector<int> &classIds);
 
     // Get class ID for a specific track
@@ -62,6 +62,8 @@ public:
                          std::vector<std::pair<int, cv::Rect>> &trackedObjects);
     float calculateIoU(const cv::Rect &box1, const cv::Rect &box2) const;
 
+
+
 private:
     // Map of active tracks
     std::unordered_map<int, Track> tracks;
@@ -69,21 +71,24 @@ private:
     // Next available track ID
     int nextId;
 
+    // reidentification ID
+    int reidId;
+    
     // Maximum allowed distance for matching
     int maxDistance;
-    
+
     // Maximum number of frames an object can be lost before track is deleted
     int maxDisappeared;
-    
+
     // Conversion factor from pixels to meters
     const float PIXELS_TO_METERS;
 
     // Frame time in seconds
     const float FRAME_TIME;
-    
+
     // Maximum number of frames to keep history for reidentification
     const int maxFramesToKeepHistory;
-    
+
     // Threshold for reidentification
     const float reidentificationThreshold;
 
@@ -103,7 +108,6 @@ private:
     cv::Rect predictKalmanFilter(Track &track);
 
     std::map<int, TrackHistory> recentlyLostTracks;
-
 };
 
 #endif // TRACKING_H
