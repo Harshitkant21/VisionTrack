@@ -39,7 +39,7 @@ This guide provides step-by-step instructions to set up, build, and run VisionTr
 
   3. Move the `.onnx` file into the project under:
      ```
-     VisionTrack/model/yolov11n.onnx
+     VisionTrack/model/yolov8n.onnx
      ```
 
   4. Also include the `coco.names` file (class labels for COCO dataset) in the same `model/` folder:
