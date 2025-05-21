@@ -103,9 +103,11 @@ int main(int argc, char **argv)
 
     // Recording parameters
     std::string outputDir = config.get("video_output_path", "outputs/");
-    std::string codec = config.get("video_codec", "XVID");
+    int maxRecordings = config.getInt("max_recordings", 5);
+    std::string videoCodec = config.get("video_codec", "mp4v");
     bool recordOnStartup = config.getBool("record_on_startup", false);
     bool recordWithAnnotations = config.getBool("record_with_annotations", true);
+    int maxRecordingTime = config.getInt("max_recording_time", 300);
 
     //! === 4. Initialize detector ===
     Detection detector(modelPath, classesPath, confThreshold, nmsThreshold);
@@ -115,6 +117,10 @@ int main(int argc, char **argv)
 
     //! === 6. Initialize alert manager ===
     AlertManager alertManager(speedLimitKmh, stoppedTimeThreshold, restrictedAreaThreshold);
+
+    //! === 7. Initialize video recorder ===
+    VideoRecorder recorder(outputDir, maxRecordings, videoCodec);
+    bool isRecording = recordOnStartup;
 
     //! === 7. Initialize video capture ===
     cv::VideoCapture cap;
@@ -336,6 +342,12 @@ int main(int argc, char **argv)
         // Display frame
         cv::imshow("VisionTrack", frame);
 
+        // Record video if enabled
+        if (isRecording && recordWithAnnotations)
+        {
+            recorder.writeFrame(frame);
+        }
+
         // Calculate how much time we should wait to maintain consistent framerate
         int processingTime = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  frameEndTime - frameStartTime)
@@ -359,9 +371,30 @@ int main(int argc, char **argv)
             // Toggle velocity vector display
             showVelocityVectors = !showVelocityVectors;
         }
+        else if (key == 'r' || key == 'R')
+        {
+            if (!isRecording)
+            {
+                if (recorder.startRecording(frame.size(), actualFPS))
+                {
+                    isRecording = true;
+                    std::cout << "Recording started" << std::endl;
+                }
+            }
+            else
+            {
+                recorder.stopRecording();
+                isRecording = false;
+                std::cout << "Recording stopped" << std::endl;
+            }
+        }
     }
 
     // Clean up
+    if (isRecording)
+    {
+        recorder.stopRecording();
+    }
     cap.release();
     cv::destroyAllWindows();
     return 0;
