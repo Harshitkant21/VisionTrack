@@ -83,7 +83,7 @@ bool Detection::detect(const cv::Mat &frame, std::vector<cv::Rect> &boxes, std::
     }
 
     // Debug output shape
-    std::cout << "Output shape: " << outputs[0].size[0] << "x" << outputs[0].size[1] << "x" << outputs[0].size[2] << std::endl;
+    // std::cout << "Output shape: " << outputs[0].size[0] << "x" << outputs[0].size[1] << "x" << outputs[0].size[2] << std::endl;
 
     // Process output
     if (outputs.empty() || outputs[0].empty())
@@ -127,12 +127,12 @@ bool Detection::detect(const cv::Mat &frame, std::vector<cv::Rect> &boxes, std::
             float h = row_ptr[3];
 
             // Debug print the raw values
-            std::cout << "Raw box values from model: " << x << ", " << y << ", " << w << ", " << h << std::endl;
+            // std::cout << "Raw box values from model: " << x << ", " << y << ", " << w << ", " << h << std::endl;
 
             // Assuming normalized coordinates (0-1) - most common for YOLO models
             if (x <= 1.0 && y <= 1.0 && w <= 1.0 && h <= 1.0)
             {
-                std::cout << "Detected normalized coordinates (0-1)" << std::endl;
+                // std::cout << "Detected normalized coordinates (0-1)" << std::endl;
                 // Scale to original image size
                 x *= original_width;
                 y *= original_height;
@@ -142,7 +142,7 @@ bool Detection::detect(const cv::Mat &frame, std::vector<cv::Rect> &boxes, std::
             // If coordinates are relative to input size (0-640)
             else if (x <= input_width && y <= input_height)
             {
-                std::cout << "Detected input-relative coordinates (0-640)" << std::endl;
+                // std::cout << "Detected input-relative coordinates (0-640)" << std::endl;
                 // Scale to original image size
                 x = x * x_factor;
                 y = y * y_factor;
@@ -152,7 +152,8 @@ bool Detection::detect(const cv::Mat &frame, std::vector<cv::Rect> &boxes, std::
             // If coordinates are already in original image pixels, no scaling needed
             else
             {
-                std::cout << "Detected direct pixel coordinates" << std::endl;
+
+                // std::cout << "Detected direct pixel coordinates" << std::endl;
             }
 
             // Convert center-width-height to top-left format
@@ -197,7 +198,7 @@ bool Detection::detect(const cv::Mat &frame, std::vector<cv::Rect> &boxes, std::
     classIds = nmsClassIds;
     confidences = nmsConfidences;
 
-    std::cout << "Detected " << boxes.size() << " objects" << std::endl;
+    // std::cout << "Detected " << boxes.size() << " objects" << std::endl;
     return !boxes.empty();
 }
 

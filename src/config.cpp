@@ -6,6 +6,7 @@
 #include <system_error>
 #include <algorithm>
 
+
 Config::Config()
 {
     //! Initialize with default values
@@ -38,6 +39,8 @@ Config::Config()
     settings["velocity_vector_scale"]=2.0;
     settings["font_scale"]=0.5;
     settings["font_thickness"]=1;
+    settings["footer_height"]=50;
+    settings["alert_panel_width"]=std::to_string(400);
 
     // Alert parameters
     settings["speed_limit"]="50.0";

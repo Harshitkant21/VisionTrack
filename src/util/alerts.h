@@ -45,7 +45,7 @@ public:
     // Methods for UI integration
     std::vector<Alert> getActiveAlerts() const { return activeAlerts; }
     void clearOldAlerts(int maxAgeSeconds = 60);
-    void drawAlerts(cv::Mat &frame);
+    void drawAlerts(cv::Mat &frame, int xStart, int yStart);
 
     // Export alerts for UI
     std::string getAlertsAsJson() const;

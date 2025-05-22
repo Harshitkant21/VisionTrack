@@ -19,8 +19,8 @@ Tracker::Tracker(int maxDistThreshold, int maxDisappeared,
       FRAME_TIME(frameTime),
       nextId(0)
 {
-    std::cout << "Tracker initialized with max distance: " << maxDistance
-              << ", max disappeared: " << maxDisappeared << std::endl;
+    // std::cout << "Tracker initialized with max distance: " << maxDistance
+    //           << ", max disappeared: " << maxDisappeared << std::endl;
 }
 
 // Update the tracker with new detections
@@ -28,7 +28,7 @@ std::vector<std::pair<int, cv::Rect>> Tracker::update(const std::vector<cv::Rect
 {
     std::vector<std::pair<int, cv::Rect>> trackedObjects;
 
-    std::cout << "Updating tracker with " << boxes.size() << " boxes, current tracks: " << tracks.size() << std::endl;
+    // std::cout << "Updating tracker with " << boxes.size() << " boxes, current tracks: " << tracks.size() << std::endl;
 
     if (boxes.empty())
     {

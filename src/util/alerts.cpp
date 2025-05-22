@@ -76,7 +76,7 @@ void AlertManager::checkStoppedVehicle(int trackId, const std::string &className
     }
 }
 
-void AlertManager::drawAlerts(cv::Mat &frame)
+void AlertManager::drawAlerts(cv::Mat &frame, int xStart, int yStart)
 {
     int yOffset = 30;
 
