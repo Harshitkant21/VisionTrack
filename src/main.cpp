@@ -97,6 +97,8 @@ int main(int argc, char **argv)
     float velocityScale = config.getFloat("velocity_vector_scale", 2.0f);
     float fontScale = config.getFloat("font_scale", 0.5f);
     int fontThickness = config.getInt("font_thickness", 1);
+    int footerHeight = config.getInt("footer_height", 50);
+    int alertPanelWidth = config.getInt("alert_panel_width", 400);
 
     // Alert parameters
     float speedLimitKmh = config.getFloat("speed_limit", 50.0f);
@@ -175,6 +177,13 @@ int main(int argc, char **argv)
             throw std::runtime_error("End of video stream");
             break;
         }
+
+        cv::Mat uiFrame(frame.rows + footerHeight, frame.cols + alertPanelWidth, frame.type());
+        uiFrame.setTo(cv::Scalar(40, 40, 40));
+        frame.copyTo(uiFrame(cv::Rect(0, 0, frame.cols, frame.rows)));
+        // Draw a vertical separator line between video and alert panel
+        cv::line(uiFrame, cv::Point(frame.cols, 0), cv::Point(frame.cols, frame.rows + footerHeight),
+                 cv::Scalar(80, 80, 80), 2);
 
         // Detect objects
         detector.detect(frame, boxes, classIds, confidences);
@@ -280,7 +289,7 @@ int main(int argc, char **argv)
             alertManager.clearOldAlerts(60); // Remove alerts older than 60 seconds
 
             // Draw alerts
-            alertManager.drawAlerts(frame);
+            alertManager.drawAlerts(uiFrame, frame.cols + 10, 50);
 
             // Get active alerts as JSON for UI
             std::string alertsJson = alertManager.getAlertsAsJson();
@@ -333,33 +342,48 @@ int main(int argc, char **argv)
             }
         }
 
+        // Copy the frame to the UI
+        frame.copyTo(uiFrame(cv::Rect(0, 0, frame.cols, frame.rows)));
+
         // Calculate and display FPS
         auto frameEndTime = std::chrono::steady_clock::now();
+        // Calculate processing time
+        std::cout << "Processing time: " << std::chrono::duration_cast<std::chrono::milliseconds>(frameEndTime - frameStartTime).count() << " ms" << std::endl;
+
         float currentFPS = 1000.0f / std::chrono::duration_cast<std::chrono::milliseconds>(
                                          frameEndTime - frameStartTime)
                                          .count();
-        cv::putText(frame, "FPS: " + std::to_string(static_cast<int>(currentFPS)),
-                    cv::Point(20, 85), cv::FONT_HERSHEY_SIMPLEX, 0.6,
+        cv::putText(uiFrame, "FPS: " + std::to_string(static_cast<int>(currentFPS)),
+                    cv::Point(20, frame.rows + 35), cv::FONT_HERSHEY_SIMPLEX, 0.7,
                     cv::Scalar(255, 255, 255), 2);
 
         // Blinking red dot with "Recording" text
         if (isRecording)
         {
-            bool showDot = (static_cast<int>(cv::getTickCount() / cv::getTickFrequency() * 2) % 2) == 0;
+            // Blink every ~0.5s using system clock
+            static bool showDot = true;
+            static auto lastToggle = std::chrono::steady_clock::now();
+
+            auto now = std::chrono::steady_clock::now();
+            if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastToggle).count() > 500)
+            {
+                showDot = !showDot;
+                lastToggle = now;
+            }
 
             if (showDot)
             {
-                // Red dot next to text
-                cv::circle(frame, cv::Point(20, 35), 8, cv::Scalar(0, 0, 255), -1);
+                // Draw blinking red dot on top-left of the video feed
+                cv::circle(uiFrame, cv::Point(20, 30), 8, cv::Scalar(0, 0, 255), -1);
             }
 
-            // Text beside the dot
-            cv::putText(frame, "Recording", cv::Point(40, 40),
+            // Draw "Recording" text beside the dot
+            cv::putText(uiFrame, "Recording", cv::Point(40, 35),
                         cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 0, 255), 2);
         }
 
         // Display frame
-        cv::imshow("VisionTrack", frame);
+        cv::imshow("VisionTrack", uiFrame);
 
         // Record video if enabled
         if (isRecording && recordWithAnnotations)

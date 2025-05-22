@@ -29,6 +29,8 @@ show_velocity_vectors=true
 velocity_vector_scale=2.0
 font_scale=0.5
 font_thickness=1
+footer_height=50
+alert_panel_width=400
 
 # Alert parameters
 speed_limit=50.0
