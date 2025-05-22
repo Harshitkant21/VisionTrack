@@ -55,7 +55,8 @@ int main(int argc, char **argv)
     {
         if (config.loadFromFile(path + configFile))
         {
-            std::cout << "Loaded configuration from " << path + configFile << std::endl;
+            //? to check if the config file is loaded
+            // std::cout << "Loaded configuration from " << path + configFile << std::endl;
             configLoaded = true;
             break;
         }
@@ -68,8 +69,10 @@ int main(int argc, char **argv)
 
     //! === 3. Get values from config ===
 
+    // Model path
     std::string modelPath = config.get("model_path");
     std::string classesPath = config.get("classes_path");
+
     // Detection parameters
     float confThreshold = config.getFloat("confidence_threshold", 0.25f);
     float nmsThreshold = config.getFloat("nms_threshold", 0.45f);
@@ -122,7 +125,7 @@ int main(int argc, char **argv)
     VideoRecorder recorder(outputDir, maxRecordings, videoCodec);
     bool isRecording = recordOnStartup;
 
-    //! === 7. Initialize video capture ===
+    //! === 8. Initialize video capture ===
     cv::VideoCapture cap;
 
     if (!videoPath.empty())
@@ -141,7 +144,7 @@ int main(int argc, char **argv)
 
     if (!cap.isOpened())
     {
-        std::cerr << "Error: Could not open video source" << std::endl;
+        throw std::invalid_argument("Video source not found");
         return -1;
     }
 
@@ -154,7 +157,7 @@ int main(int argc, char **argv)
     // Track previous positions for trajectory visualization
     std::unordered_map<int, std::vector<cv::Point>> trajectories;
 
-    //! === 8. Main loop ===
+    //! === 9. Main loop ===
     cv::Mat frame;
     std::vector<cv::Rect> boxes;
     std::vector<int> classIds;
@@ -169,7 +172,7 @@ int main(int argc, char **argv)
         cap >> frame;
         if (frame.empty())
         {
-            std::cerr << "End of video stream" << std::endl;
+            throw std::runtime_error("End of video stream");
             break;
         }
 
@@ -336,8 +339,24 @@ int main(int argc, char **argv)
                                          frameEndTime - frameStartTime)
                                          .count();
         cv::putText(frame, "FPS: " + std::to_string(static_cast<int>(currentFPS)),
-                    cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 1.0,
-                    cv::Scalar(0, 255, 0), 2);
+                    cv::Point(20, 85), cv::FONT_HERSHEY_SIMPLEX, 0.6,
+                    cv::Scalar(255, 255, 255), 2);
+
+        // Blinking red dot with "Recording" text
+        if (isRecording)
+        {
+            bool showDot = (static_cast<int>(cv::getTickCount() / cv::getTickFrequency() * 2) % 2) == 0;
+
+            if (showDot)
+            {
+                // Red dot next to text
+                cv::circle(frame, cv::Point(20, 35), 8, cv::Scalar(0, 0, 255), -1);
+            }
+
+            // Text beside the dot
+            cv::putText(frame, "Recording", cv::Point(40, 40),
+                        cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 0, 255), 2);
+        }
 
         // Display frame
         cv::imshow("VisionTrack", frame);
