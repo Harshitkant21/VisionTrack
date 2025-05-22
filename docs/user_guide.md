@@ -54,7 +54,7 @@ Welcome to **VisionTrack** – a real-time object tracking and surveillance syst
 
   3. Move the `.onnx` file into the project under:
      ```
-     VisionTrack/model/yolov11n.onnx
+     VisionTrack/model/yolov8n.onnx
      ```
 
   4. Also include the `coco.names` file (class labels for COCO dataset) in the same `model/` folder:
@@ -221,3 +221,5 @@ ctest --verbose
 - This setup uses MinGW Makefiles for Windows. If using Linux/macOS, adjust the generator (e.g., `Unix Makefiles`) and library extensions (e.g., `.so` instead of `.dll`).
 - Update this guide as new features are added (e.g., how to trigger alerts).
 - Test videos are available in `data/upload/` directory
+- To use mobile camera for input we have used como studio 
+
