@@ -10,10 +10,9 @@ VisionTrack is a C++ application using OpenCV for real-time object tracking and 
   - `main.cpp`: Entry point (currently handles webcam capture).
   - `core/`: Detection, tracking, and classification logic.
   - `utils/`: Video handling and alert generation.
-  - `ui/`: User interface components.
+
 - **`include/`**: Local OpenCV headers (`opencv2/`).
-- **`lib/`**: Local OpenCV `.lib` files for linking.
-- **`bin/`**: Local OpenCV `.dll` files for runtime (optional, not tracked by Git).
+
 - **`build/`**: Generated build files (ignored by `.gitignore`).
 - **`tests/`**: Unit tests for core functionality.
 - **`docs/`**: Documentation (this file, user guide, UML).
@@ -28,7 +27,7 @@ VisionTrack is a C++ application using OpenCV for real-time object tracking and 
 
 - **File**: `CMakeLists.txt` in the root.
 - **Setup**:
-  - Uses local OpenCV in `VisionTrack/include/` and `VisionTrack/lib/`.
+  - Uses local OpenCV in `VisionTrack/include/`
   - Includes `src/main.cpp` as the executable target.
   - Links to OpenCV libraries (e.g., `opencv_core`, `opencv_videoio`).
 - **Build Process**:
@@ -46,7 +45,7 @@ VisionTrack is a C++ application using OpenCV for real-time object tracking and 
 - **Tracking**: Kalman filter or similar in `core/tracking.cpp`.
 - **Classification**: Basic type detection (e.g., person, vehicle) in `core/classifier.cpp`.
 - **Alerts**: Condition-based alerts in `utils/alerts.cpp`.
-- **UI**: Display and controls in `ui/interface.cpp`.
+- **Video**: Video recording in `utils/video.cpp`.
 
 ## Development Notes
 

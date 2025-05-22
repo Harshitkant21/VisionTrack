@@ -85,25 +85,29 @@ void AlertManager::drawAlerts(cv::Mat &frame)
         // Prepare alert text
         std::string displayText = "ID " + std::to_string(alert.trackId) + ": " + alert.message;
 
-        // Draw text background
+        // Get text size
         int baseLine;
         cv::Size textSize = cv::getTextSize(displayText, cv::FONT_HERSHEY_SIMPLEX, 0.6, 2, &baseLine);
 
+        // Right-aligned x coordinate
+        int x = frame.cols - textSize.width - 20;
+
+        // Draw background rectangle
         cv::rectangle(frame,
-                      cv::Point(10, yOffset - textSize.height),
-                      cv::Point(10 + textSize.width, yOffset + baseLine),
-                      cv::Scalar(0, 0, 0),
-                      cv::FILLED);
+                      cv::Point(x - 5, yOffset - textSize.height), // Add padding
+                      cv::Point(x + textSize.width + 5, yOffset + baseLine),
+                      cv::Scalar(0, 0, 0), cv::FILLED);
 
         // Draw alert text
         cv::putText(frame, displayText,
-                    cv::Point(10, yOffset),
+                    cv::Point(x, yOffset),
                     cv::FONT_HERSHEY_SIMPLEX,
-                    0.6, cv::Scalar(255, 255, 255), 2);
+                    0.6, cv::Scalar(0, 255, 255), 2); // Yellow text
 
         yOffset += textSize.height + 10;
     }
 }
+
 
 // Add method to export alerts as JSON for UI
 std::string AlertManager::getAlertsAsJson() const

@@ -35,3 +35,11 @@ speed_limit=50.0
 stopped_time_threshold=30.0
 restricted_area_threshold=0.5
 alert_display_time=60
+
+# Video Recording Settings
+video_output_path=outputs/
+max_recordings=5
+video_codec=mp4v
+record_on_startup=false
+record_with_annotations=true
+max_recording_time=300  # 5 minutes max per recording

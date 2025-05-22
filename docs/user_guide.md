@@ -1,9 +1,24 @@
-# VisionTrack User Guide
+# 📔VisionTrack User Guide
 
-## Introduction
-This guide provides step-by-step instructions to set up, build, and run VisionTrack, a real-time object tracking and surveillance system built with C++ and OpenCV. It’s designed for team members to replicate the development environment and contribute collaboratively via GitHub.
+## 📘Introduction
+Welcome to **VisionTrack** – a real-time object tracking and surveillance system designed for high-performance monitoring using C++ and OpenCV.
+> ⚙️ This guide will help you set up the environment, build, and run the application easily.
 
-## Installation
+---
+
+## ⚡ Quick Links
+
+- 🚀 [Installation](#-installation)
+- 🧪 [Testing Setup](#-testing-setup)
+- 🛠️ [Core Features & Controls](#-core-features-and-controls)
+- 📈 [Performance Optimization](#-performance-optimization)
+- 🙋‍♂️ [Contributing](#-contributing)
+- 🧯 [Troubleshooting](#-troubleshooting)
+
+---
+
+## 🛠️ Installation
+
 
 ### Step 1: Clone the Repository
 - Open a terminal (e.g., PowerShell, Command Prompt, or Git Bash).
@@ -81,25 +96,106 @@ This guide provides step-by-step instructions to set up, build, and run VisionTr
 - Press a key (e.g., 'q') to exit (once added to the code).
 - **Note**: If you get a “DLL not found” error, copy `.dll` files from `VisionTrack/bin/` to `VisionTrack/build/` (or `install/bin/` if installed).
 
-## Dependencies
+## 🧰 Dependencies
 - **OpenCV**: Included locally in the repository:
   - Headers: `VisionTrack/include/opencv2/` (e.g., `core.hpp`, `videoio.hpp`).
   - Libraries: `VisionTrack/lib/` (e.g., `libopencv_core.a`, `libopencv_videoio.a` for MinGW).
   - Binaries: `VisionTrack/bin/` (e.g., `opencv_world460.dll`—not tracked by Git, copy manually if needed).
 - No external OpenCV installation is required—just use what’s in the repo.
 
-## Usage
-- **Current Features** (as of initial setup):
-  - Displays live webcam feed in a window (implemented in `src/main.cpp`).
-- **Planned Features**:
-  - Object detection (e.g., people, vehicles) using Haar cascades or YOLO.
-  - Object tracking with velocity and trajectory (e.g., Kalman filter).
-  - Classification of detected objects.
-  - Alerts for specific conditions (e.g., restricted areas).
-  - Video recording and UI controls.
-- Check `README.md` or GitHub Issues for the latest updates.
+## 🎮 Core Features and Controls
 
-## Contributing
+### Keyboard Controls
+| Key | Function | Visual Indicator |
+|-----|----------|------------------|
+| R | Start/Stop Recording | - |
+| T | Toggle Trajectories | Lines showing path |
+| V | Toggle Velocity Vectors | Arrows showing direction |
+| A | Toggle Alert Display | Alert boxes |
+| ESC/Q | Exit Application | - |
+
+
+### Alert System
+| Alert Type | Visual | Description |
+|------------|---------|-------------|
+| Speed Violation | ⚠️ Yellow Box | Vehicle exceeding speed limit |
+| Restricted Area | 🚫 Red Box | Object in prohibited zone |
+| Stopped Vehicle | ⏰ Blue Box | Vehicle stationary too long |
+
+## 🧪 Testing Setup
+
+### Setting up GoogleTest
+1. Clone GoogleTest into include directory:
+```bash
+cd D:\Projects\VisionTrack
+git submodule add https://github.com/google/googletest.git include/googletest
+```
+
+2. Update CMakeLists.txt:
+```cmake
+# Add GoogleTest as a subdirectory 
+add_subdirectory(include/googletest)
+
+# Add the tests directory
+add_subdirectory(tests)
+```
+
+3. Create test directory structure:
+```
+VisionTrack/
+├── tests/
+│   ├── CMakeLists.txt
+│   ├── test_detection.cpp
+│   ├── test_tracking.cpp
+│   ├── test_alerts.cpp
+│   └── test_config.cpp
+```
+
+### Running Tests
+1. Build with testing enabled:
+```bash
+cd build
+cmake -G "MinGW Makefiles" .. -DBUILD_TESTING=ON
+cmake --build .
+```
+
+2. Execute all tests:
+```bash
+ctest --verbose
+```
+
+3. Run specific test:
+```bash
+./tests/test_detection.exe
+./tests/test_tracking.exe
+./tests/test_alerts.exe
+```
+
+### Test Categories
+1. **Detection Tests**
+   - Model loading validation
+   - Object detection accuracy
+
+2. **Tracking Tests**
+   - Object persistence
+   - Velocity calculation
+
+3. **Alert Tests**
+   - Speed violation detection
+   - Restricted area monitoring
+   - Stopped vehicle alerts
+
+
+
+## 📈 Performance Optimization
+
+### Resource Usage
+- Monitor Task Manager for:
+  - CPU utilization
+  - Memory consumption
+  - GPU usage (if enabled)
+
+## 🤝 Contributing
 - **Workflow**:
   1. Pull the latest code: `git pull origin main`.
   2. Create a branch: `git checkout -b feature-name` (e.g., `detection-module`).
@@ -110,7 +206,7 @@ This guide provides step-by-step instructions to set up, build, and run VisionTr
 - **Tasks**: Pick tasks from GitHub Issues (e.g., “Implement tracking”).
 - **Documentation**: Update this guide or `tech_specs.md` if you add new setup steps or features.
 
-## Troubleshooting
+## 🧯Troubleshooting
 - **CMake Errors**:
   - “Generator not found”: Ensure MinGW’s `bin/` is in your PATH (e.g., `C:/MinGW/bin/`).
   - “OpenCV not found”: Verify `VisionTrack/include/` and `VisionTrack/lib/` exist and match your OpenCV version.
@@ -121,7 +217,7 @@ This guide provides step-by-step instructions to set up, build, and run VisionTr
   - “Webcam not opening”: Test with a standalone OpenCV program to isolate driver issues.
 - **Contact**: Ask the team lead (you!) via GitHub Issues if stuck.
 
-## Notes
+## 📝 Notes
 - This setup uses MinGW Makefiles for Windows. If using Linux/macOS, adjust the generator (e.g., `Unix Makefiles`) and library extensions (e.g., `.so` instead of `.dll`).
 - Update this guide as new features are added (e.g., how to trigger alerts).
-- To use mobile camera for input we have used como studio 
+- Test videos are available in `data/upload/` directory
