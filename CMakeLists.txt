@@ -21,7 +21,7 @@ add_subdirectory(include/googletest)
 add_subdirectory(tests)
 
 # Add executable for the main application
-add_executable(VisionTrack src/main.cpp src/core/detection.cpp src/core/tracking.cpp src/core/hungarian.cpp src/util/alerts.cpp src/config.cpp)
+add_executable(VisionTrack src/main.cpp src/core/detection.cpp src/core/tracking.cpp src/core/hungarian.cpp src/util/alerts.cpp src/util/video.cpp src/config.cpp)
 
 
 target_link_libraries(VisionTrack ${OpenCV_LIBS})

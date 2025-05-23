@@ -29,9 +29,19 @@ show_velocity_vectors=true
 velocity_vector_scale=2.0
 font_scale=0.5
 font_thickness=1
+footer_height=50
+alert_panel_width=400
 
 # Alert parameters
 speed_limit=50.0
 stopped_time_threshold=30.0
 restricted_area_threshold=0.5
 alert_display_time=60
+
+# Video Recording Settings
+video_output_path=outputs/
+max_recordings=5
+video_codec=mp4v
+record_on_startup=false
+record_with_annotations=true
+max_recording_time=300  # 5 minutes max per recording

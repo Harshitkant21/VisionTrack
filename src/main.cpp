@@ -55,7 +55,8 @@ int main(int argc, char **argv)
     {
         if (config.loadFromFile(path + configFile))
         {
-            std::cout << "Loaded configuration from " << path + configFile << std::endl;
+            //? to check if the config file is loaded
+            // std::cout << "Loaded configuration from " << path + configFile << std::endl;
             configLoaded = true;
             break;
         }
@@ -68,8 +69,10 @@ int main(int argc, char **argv)
 
     //! === 3. Get values from config ===
 
+    // Model path
     std::string modelPath = config.get("model_path");
     std::string classesPath = config.get("classes_path");
+
     // Detection parameters
     float confThreshold = config.getFloat("confidence_threshold", 0.25f);
     float nmsThreshold = config.getFloat("nms_threshold", 0.45f);
@@ -94,6 +97,8 @@ int main(int argc, char **argv)
     float velocityScale = config.getFloat("velocity_vector_scale", 2.0f);
     float fontScale = config.getFloat("font_scale", 0.5f);
     int fontThickness = config.getInt("font_thickness", 1);
+    int footerHeight = config.getInt("footer_height", 50);
+    int alertPanelWidth = config.getInt("alert_panel_width", 400);
 
     // Alert parameters
     float speedLimitKmh = config.getFloat("speed_limit", 50.0f);
@@ -103,9 +108,11 @@ int main(int argc, char **argv)
 
     // Recording parameters
     std::string outputDir = config.get("video_output_path", "outputs/");
-    std::string codec = config.get("video_codec", "XVID");
+    int maxRecordings = config.getInt("max_recordings", 5);
+    std::string videoCodec = config.get("video_codec", "mp4v");
     bool recordOnStartup = config.getBool("record_on_startup", false);
     bool recordWithAnnotations = config.getBool("record_with_annotations", true);
+    int maxRecordingTime = config.getInt("max_recording_time", 300);
 
     //! === 4. Initialize detector ===
     Detection detector(modelPath, classesPath, confThreshold, nmsThreshold);
@@ -116,7 +123,11 @@ int main(int argc, char **argv)
     //! === 6. Initialize alert manager ===
     AlertManager alertManager(speedLimitKmh, stoppedTimeThreshold, restrictedAreaThreshold);
 
-    //! === 7. Initialize video capture ===
+    //! === 7. Initialize video recorder ===
+    VideoRecorder recorder(outputDir, maxRecordings, videoCodec);
+    bool isRecording = recordOnStartup;
+
+    //! === 8. Initialize video capture ===
     cv::VideoCapture cap;
 
     if (!videoPath.empty())
@@ -135,7 +146,7 @@ int main(int argc, char **argv)
 
     if (!cap.isOpened())
     {
-        std::cerr << "Error: Could not open video source" << std::endl;
+        throw std::invalid_argument("Video source not found");
         return -1;
     }
 
@@ -148,7 +159,7 @@ int main(int argc, char **argv)
     // Track previous positions for trajectory visualization
     std::unordered_map<int, std::vector<cv::Point>> trajectories;
 
-    //! === 8. Main loop ===
+    //! === 9. Main loop ===
     cv::Mat frame;
     std::vector<cv::Rect> boxes;
     std::vector<int> classIds;
@@ -163,9 +174,16 @@ int main(int argc, char **argv)
         cap >> frame;
         if (frame.empty())
         {
-            std::cerr << "End of video stream" << std::endl;
+            throw std::runtime_error("End of video stream");
             break;
         }
+
+        cv::Mat uiFrame(frame.rows + footerHeight, frame.cols + alertPanelWidth, frame.type());
+        uiFrame.setTo(cv::Scalar(40, 40, 40));
+        frame.copyTo(uiFrame(cv::Rect(0, 0, frame.cols, frame.rows)));
+        // Draw a vertical separator line between video and alert panel
+        cv::line(uiFrame, cv::Point(frame.cols, 0), cv::Point(frame.cols, frame.rows + footerHeight),
+                 cv::Scalar(80, 80, 80), 2);
 
         // Detect objects
         detector.detect(frame, boxes, classIds, confidences);
@@ -271,7 +289,7 @@ int main(int argc, char **argv)
             alertManager.clearOldAlerts(60); // Remove alerts older than 60 seconds
 
             // Draw alerts
-            alertManager.drawAlerts(frame);
+            alertManager.drawAlerts(uiFrame, frame.cols + 10, 50);
 
             // Get active alerts as JSON for UI
             std::string alertsJson = alertManager.getAlertsAsJson();
@@ -324,17 +342,54 @@ int main(int argc, char **argv)
             }
         }
 
+        // Copy the frame to the UI
+        frame.copyTo(uiFrame(cv::Rect(0, 0, frame.cols, frame.rows)));
+
         // Calculate and display FPS
         auto frameEndTime = std::chrono::steady_clock::now();
+        // Calculate processing time
+        std::cout << "Processing time: " << std::chrono::duration_cast<std::chrono::milliseconds>(frameEndTime - frameStartTime).count() << " ms" << std::endl;
+
         float currentFPS = 1000.0f / std::chrono::duration_cast<std::chrono::milliseconds>(
                                          frameEndTime - frameStartTime)
                                          .count();
-        cv::putText(frame, "FPS: " + std::to_string(static_cast<int>(currentFPS)),
-                    cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 1.0,
-                    cv::Scalar(0, 255, 0), 2);
+        cv::putText(uiFrame, "FPS: " + std::to_string(static_cast<int>(currentFPS)),
+                    cv::Point(20, frame.rows + 35), cv::FONT_HERSHEY_SIMPLEX, 0.7,
+                    cv::Scalar(255, 255, 255), 2);
+
+        // Blinking red dot with "Recording" text
+        if (isRecording)
+        {
+            // Blink every ~0.5s using system clock
+            static bool showDot = true;
+            static auto lastToggle = std::chrono::steady_clock::now();
+
+            auto now = std::chrono::steady_clock::now();
+            if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastToggle).count() > 500)
+            {
+                showDot = !showDot;
+                lastToggle = now;
+            }
+
+            if (showDot)
+            {
+                // Draw blinking red dot on top-left of the video feed
+                cv::circle(uiFrame, cv::Point(20, 30), 8, cv::Scalar(0, 0, 255), -1);
+            }
+
+            // Draw "Recording" text beside the dot
+            cv::putText(uiFrame, "Recording", cv::Point(40, 35),
+                        cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 0, 255), 2);
+        }
 
         // Display frame
-        cv::imshow("VisionTrack", frame);
+        cv::imshow("VisionTrack", uiFrame);
+
+        // Record video if enabled
+        if (isRecording && recordWithAnnotations)
+        {
+            recorder.writeFrame(frame);
+        }
 
         // Calculate how much time we should wait to maintain consistent framerate
         int processingTime = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -359,9 +414,30 @@ int main(int argc, char **argv)
             // Toggle velocity vector display
             showVelocityVectors = !showVelocityVectors;
         }
+        else if (key == 'r' || key == 'R')
+        {
+            if (!isRecording)
+            {
+                if (recorder.startRecording(frame.size(), actualFPS))
+                {
+                    isRecording = true;
+                    std::cout << "Recording started" << std::endl;
+                }
+            }
+            else
+            {
+                recorder.stopRecording();
+                isRecording = false;
+                std::cout << "Recording stopped" << std::endl;
+            }
+        }
     }
 
     // Clean up
+    if (isRecording)
+    {
+        recorder.stopRecording();
+    }
     cap.release();
     cv::destroyAllWindows();
     return 0;
