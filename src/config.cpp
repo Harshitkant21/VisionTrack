@@ -11,8 +11,8 @@ Config::Config()
     //! Initialize with default values
     
     //file names
-    settings["model_path"] = "models/yolo8n.onnx";
-    settings["classes_path"] = "models/coco.names";
+    settings["model_path"] = "D:/VisionTrack/models/yolov8n.onnx";
+    settings["classes_path"] = "D:/VisionTrack/models/coco.names";
 
     // Detection parameters
     settings["confidence_threshold"] = "0.25";

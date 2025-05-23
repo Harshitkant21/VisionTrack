@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 # Enable Testing
 enable_testing()
 
-set(OpenCV_DIR "D:/Projects/VisionTrack/include/install")
+set(OpenCV_DIR "D:/VisionTrack/include/install")
 find_package(OpenCV REQUIRED)
 
 include_directories(${OpenCV_DIR} include src/core src/utils src/ui)
