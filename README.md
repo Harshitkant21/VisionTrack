@@ -29,7 +29,7 @@
 
 ---
 
-## 🚀 Features
+##  Features
 
 - **Real-time Object Detection**
   - YOLOv8 integration for accurate detection
@@ -54,7 +54,7 @@
   - Rolling storage system
   - MP4 format support
 
-## 🛠️ Prerequisites
+## Prerequisites
 
 - **Development Environment**
   - C++ Compiler (MinGW-w64/MSVC)
@@ -66,7 +66,7 @@
   - Webcam/IP Camera
   - GPU recommended for YOLOv8
 
-## ⚡ Quick Start
+##  Quick Start
 
 1. **Clone Repository**
 ```bash
@@ -90,7 +90,7 @@ cmake --build . --config Release
 ./VisionTrack.exe
 ```
 
-## 🧪 Testing
+##  Testing
 
 ### Running Tests
 ```bash
@@ -111,13 +111,13 @@ ctest --verbose
 [ PASSED  ] 12 tests.
 ```
 
-## 📖 Documentation
+## Documentation
 
 - [User Guide](docs/user_guide.md) - Detailed setup and usage instructions
 - [Technical Specs](docs/tech_specs.md) - Architecture and implementation details
 
 
-## 🎮 Usage
+##  Usage
 
 1. **Start Application**
    - Launch VisionTrack.exe
@@ -138,7 +138,7 @@ ctest --verbose
    max_recordings=5
    ```
 
-## 🤝 Contributing
+##  Contributing
 
 1. Fork the repository
 2. Create your feature branch:
@@ -155,17 +155,17 @@ git push origin feature/AmazingFeature
 ```
 5. Open a Pull Request
 
-## 📝 License
+##  License
 
 Distributed under the MIT License. See `LICENSE` for more information.
 
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 - OpenCV Team
 - Ultralytics YOLOv8
 - Contributors & Testers
 
-## 📫 Contact
+##  Contact
 
 Twitter - [@Harshit](https://x.com/Harshit61124884)
 
