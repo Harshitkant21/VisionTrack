@@ -1,0 +1,21 @@
+@startuml ComponentDiagram
+
+package "VisionTrack" {
+    [Video Input] as VI
+    [Detection Module] as DM
+    [Tracking System] as TS
+    [Alert System] as AS
+    [Recording System] as RS
+    database "Config" as CF
+
+    VI -> DM : frames
+    DM -> TS : detections
+    TS -> AS : tracks
+    AS -> RS : alerts
+    CF --> DM : settings
+    CF --> TS : parameters
+    CF --> AS : thresholds
+    CF --> RS : preferences
+}
+
+@enduml
