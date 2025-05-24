@@ -1,0 +1,34 @@
+@startuml SequenceDiagram
+
+actor User
+participant Main
+participant "Video Input" as Video
+participant Detection
+participant Tracker
+participant AlertManager
+participant VideoRecorder
+
+User -> Main: start application
+activate Main
+
+Main -> Video: open camera/file
+activate Video
+
+loop For each frame
+    Video -> Main: read frame
+    Main -> Detection: detect(frame)
+    Detection --> Main: boxes, classIds
+    
+    Main -> Tracker: update(boxes)
+    Tracker --> Main: tracks
+    
+    Main -> AlertManager: checkViolations()
+    
+    alt isRecording
+        Main -> VideoRecorder: writeFrame()
+    end
+    
+    Main -> User: display frame
+end
+
+@enduml

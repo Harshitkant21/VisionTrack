@@ -1,0 +1,61 @@
+@startuml VisionTrack Class Diagram
+
+class Detection {
+  -cv::dnn::Net net
+  -std::vector<std::string> classes
+  -float confThreshold
+  -float nmsThreshold
+  
+  +Detection(modelPath: string, classesPath: string)
+  +detect(frame: cv::Mat&): bool
+  +getClassNames(): vector<string>
+}
+
+class Tracker {
+  -int maxDistance
+  -int maxDisappeared
+  -float pixelsToMeters
+  -std::unordered_map<int, Track> tracks
+  
+  +Tracker(maxDist: int, maxDisappeared: int)
+  +update(boxes: vector<cv::Rect>): vector<pair<int,cv::Rect>>
+  +getVelocity(id: int, vx: float&, vy: float&): bool
+}
+
+class AlertManager {
+  -float speedLimit
+  -float stoppedTimeThreshold
+  -vector<Alert> activeAlerts
+  
+  +checkSpeedViolation(id: int, speed: float)
+  +checkRestrictedArea(id: int, box: cv::Rect)
+  +checkStoppedVehicle(id: int, position: cv::Point2f)
+}
+
+class VideoRecorder {
+  -cv::VideoWriter writer
+  -string outputDir
+  -int maxRecordings
+  
+  +startRecording(size: cv::Size, fps: double): bool
+  +stopRecording(): void
+  +writeFrame(frame: cv::Mat&): void
+}
+
+class Config {
+  -map<string, string> settings
+  
+  +loadFromFile(path: string): bool
+  +get(key: string): string
+  +getFloat(key: string): float
+}
+
+Detection -- Tracker
+Tracker -- AlertManager
+AlertManager -- VideoRecorder
+Config -- Detection
+Config -- Tracker
+Config -- AlertManager
+Config -- VideoRecorder
+
+@enduml
