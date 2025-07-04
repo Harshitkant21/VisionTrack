@@ -7,18 +7,18 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Enable Testing
-enable_testing()
+# enable_testing()
 
-set(OpenCV_DIR "D:/Projects/VisionTrack/include/install")
+set(OpenCV_DIR "D:/kpitProject/VisionTrack/include/install")
 find_package(OpenCV REQUIRED)
 
 include_directories(${OpenCV_DIR} include src/core src/utils src/ui)
 
 # Add GoogleTest as a subdirectory 
-add_subdirectory(include/googletest)
+# add_subdirectory(include/googletest)
 
 # Add the tests directory
-add_subdirectory(tests)
+# add_subdirectory(tests)
 
 # Add executable for the main application
 add_executable(VisionTrack src/main.cpp src/core/detection.cpp src/core/tracking.cpp src/core/hungarian.cpp src/util/alerts.cpp src/config.cpp)
