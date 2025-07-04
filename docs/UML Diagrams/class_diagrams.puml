@@ -1,61 +1,72 @@
 @startuml VisionTrack Class Diagram
 
+' Layout and styling
+skinparam monochrome true
+skinparam classFontSize 12
+skinparam classFontStyle bold
+skinparam packageStyle rectangle
+skinparam defaultTextAlignment center
+left to right direction
+
+package "Core Processing" {
+  class Detection <<YOLO>>
+  class Tracker
+}
+
+package "Output Handling" {
+  class AlertManager
+  class VideoRecorder
+}
+
+class Config
+
+' Class definitions
 class Detection {
-  -cv::dnn::Net net
-  -std::vector<std::string> classes
-  -float confThreshold
-  -float nmsThreshold
-  
-  +Detection(modelPath: string, classesPath: string)
-  +detect(frame: cv::Mat&): bool
-  +getClassNames(): vector<string>
+  -net
+  -classes
+  +loadModel(modelPath)
+  +detect(frame): boxes
 }
 
 class Tracker {
-  -int maxDistance
-  -int maxDisappeared
-  -float pixelsToMeters
-  -std::unordered_map<int, Track> tracks
-  
-  +Tracker(maxDist: int, maxDisappeared: int)
-  +update(boxes: vector<cv::Rect>): vector<pair<int,cv::Rect>>
-  +getVelocity(id: int, vx: float&, vy: float&): bool
+  -tracks
+  +update(boxes): tracks
+  +getVelocity(id): velocity
 }
 
 class AlertManager {
-  -float speedLimit
-  -float stoppedTimeThreshold
-  -vector<Alert> activeAlerts
-  
-  +checkSpeedViolation(id: int, speed: float)
-  +checkRestrictedArea(id: int, box: cv::Rect)
-  +checkStoppedVehicle(id: int, position: cv::Point2f)
+  -alerts
+  +checkAlerts(track)
 }
 
 class VideoRecorder {
-  -cv::VideoWriter writer
-  -string outputDir
-  -int maxRecordings
-  
-  +startRecording(size: cv::Size, fps: double): bool
-  +stopRecording(): void
-  +writeFrame(frame: cv::Mat&): void
+  -writer
+  +recordFrame(frame)
+  +stopRecording()
 }
 
 class Config {
-  -map<string, string> settings
-  
-  +loadFromFile(path: string): bool
-  +get(key: string): string
-  +getFloat(key: string): float
+  -settings
+  +loadConfig(path)
+  +getSetting(key)
 }
 
-Detection -- Tracker
-Tracker -- AlertManager
-AlertManager -- VideoRecorder
-Config -- Detection
-Config -- Tracker
-Config -- AlertManager
-Config -- VideoRecorder
+' Relationships
+Detection --> Tracker : provides boxes
+Tracker --> AlertManager : provides tracks
+AlertManager --> VideoRecorder : triggers recording
+Config --> Detection : configures
+Config --> Tracker : configures
+Config --> AlertManager : configures
+Config --> VideoRecorder : configures
+
+' Notes for clarity
+note right of Detection
+  Uses YOLOv8n ONNX for vehicle detection
+end note
+
+note right of Tracker
+  Uses Hungarian Algorithm and Kalman filters
+end note
 
 @enduml
